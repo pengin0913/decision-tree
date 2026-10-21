@@ -1,0 +1,1409 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>BankTree Insight | 金融信用評估與精準授信雙核心決策系統</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            bank: {
+              50: '#f0f7ff',
+              100: '#e0effe',
+              500: '#0284c7',
+              600: '#0369a1',
+              800: '#075985',
+              900: '#0c4a6e',
+              950: '#082f49'
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'Consolas', 'monospace']
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;600;700;800&display=swap" rel="stylesheet">
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .font-num { font-family: 'JetBrains Mono', monospace; }
+    .font-brand { font-family: 'Outfit', 'Noto Sans TC', sans-serif; }
+    
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 6px; height: 6px; }
+    ::-webkit-scrollbar-track { background: #0f172a; }
+    ::-webkit-scrollbar-thumb { background: #334155; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #475569; }
+
+    /* Decision Tree SVG Styles & Glow Animations */
+    .tree-line {
+      stroke: #334155;
+      stroke-width: 2;
+      transition: stroke 0.4s ease, stroke-width 0.4s ease;
+    }
+    .tree-line-active {
+      stroke: #38bdf8 !important;
+      stroke-width: 3.5 !important;
+      stroke-dasharray: 6 3;
+      animation: treeDash 1.2s linear infinite;
+      filter: drop-shadow(0 0 6px rgba(56, 189, 248, 0.7));
+    }
+    @keyframes treeDash {
+      to { stroke-dashoffset: -18; }
+    }
+    .tree-box {
+      cursor: pointer;
+      transition: transform 0.25s ease, filter 0.25s ease;
+    }
+    .tree-box:hover {
+      transform: translateY(-2px);
+    }
+    .tree-box-active rect {
+      stroke: #38bdf8 !important;
+      stroke-width: 2.5px !important;
+      filter: drop-shadow(0 0 10px rgba(56, 189, 248, 0.5));
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-hidden">
+
+  <!-- Top Global Navigation -->
+  <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 z-50 shrink-0">
+    <div class="max-w-7xl mx-auto px-4 py-3 flex flex-wrap justify-between items-center gap-3">
+      <div class="flex items-center space-x-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 to-blue-600 flex items-center justify-center text-slate-950 font-bold shadow-lg shadow-cyan-500/20">
+          <i data-lucide="shield-check" class="w-6 h-6 stroke-[2.2]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white font-brand">BankTree Insight</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/20">雙核心授信決策 v3.0</span>
+          </div>
+          <p class="text-xs text-slate-400">臨櫃風控即時審批 • 精準電銷客群雷達 • 視覺化可解釋信用決策樹</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs -->
+      <nav class="flex space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/80 overflow-x-auto text-xs max-w-full">
+        <button onclick="switchMode(1)" id="tab-btn-1" class="tab-btn px-3 py-1.5 rounded-lg font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap bg-cyan-600 text-white shadow-md shadow-cyan-600/30">
+          <i data-lucide="user-check" class="w-3.5 h-3.5"></i>
+          <span>1. 臨櫃審批沙盒</span>
+        </button>
+        <button onclick="switchMode(2)" id="tab-btn-2" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="phone-outgoing" class="w-3.5 h-3.5"></i>
+          <span>2. 精準電銷雷達</span>
+        </button>
+        <button onclick="switchMode(3)" id="tab-btn-3" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="git-branch" class="w-3.5 h-3.5"></i>
+          <span>3. 視覺化信用決策樹</span>
+        </button>
+        <button onclick="switchMode(4)" id="tab-btn-4" class="tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="pie-chart" class="w-3.5 h-3.5"></i>
+          <span>4. 風控與行銷看板</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Viewports -->
+  <main class="flex-1 overflow-y-auto p-3 sm:p-5">
+    <div class="max-w-7xl mx-auto h-full flex flex-col">
+
+      <!-- ============================================================== -->
+      <!-- MODE 1: 臨櫃風控即時審批沙盒 (Underwriter Sandbox)               -->
+      <!-- ============================================================== -->
+      <section id="mode-panel-1" class="space-y-4">
+        <!-- Subheader & Quick Presets -->
+        <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xl">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 bg-blue-500/10 text-blue-400 text-[11px] rounded border border-blue-500/20 font-mono">Underwriter Engine</span>
+              <h2 class="text-base sm:text-lg font-bold text-white">消金信貸臨櫃審核即時決策沙盒</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">輸入客戶 10 項風控指標，即時推算核貸判定、建議利率與風險敞口審查報告。</p>
+          </div>
+          <!-- Presets -->
+          <div class="flex flex-wrap items-center gap-1.5 text-xs">
+            <span class="text-slate-400 text-[11px]">快速預設樣態：</span>
+            <button onclick="loadClientPreset('premier_teacher')" class="px-2.5 py-1 rounded-lg bg-emerald-500/10 text-emerald-400 border border-emerald-500/30 hover:bg-emerald-500/20 transition font-medium">
+              公教500強高分族
+            </button>
+            <button onclick="loadClientPreset('rich_entrepreneur')" class="px-2.5 py-1 rounded-lg bg-cyan-500/10 text-cyan-400 border border-cyan-500/30 hover:bg-cyan-500/20 transition font-medium">
+              高資產自營商
+            </button>
+            <button onclick="loadClientPreset('high_risk_overdrawn')" class="px-2.5 py-1 rounded-lg bg-rose-500/10 text-rose-400 border border-rose-500/30 hover:bg-rose-500/20 transition font-medium">
+              高負債擴張客群
+            </button>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- 10 Parameters Form (7 Cols) -->
+          <div class="lg:col-span-7 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center pb-2.5 border-b border-slate-800">
+              <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                <i data-lucide="sliders" class="w-4 h-4 text-cyan-400"></i>
+                <span>申請人多維度授信審核參數 (10項指標)</span>
+              </h3>
+              <span class="text-[11px] font-mono text-slate-400">即時推算中</span>
+            </div>
+
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3.5 text-xs">
+              <!-- 1. 年收入 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>1. 年收入 (Annual Income)</span>
+                  <span id="label-income" class="font-mono font-bold text-cyan-400">120 萬元</span>
+                </div>
+                <input type="range" id="input-income" min="30" max="350" value="120" step="5" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+              </div>
+
+              <!-- 2. 負債比率 DTI -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>2. 負債比 (DTI, 總月負債/月收)</span>
+                  <span id="label-dti" class="font-mono font-bold text-cyan-400">32 %</span>
+                </div>
+                <input type="range" id="input-dti" min="10" max="85" value="32" step="1" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>安全 &lt;45%</span>
+                  <span class="text-amber-500">警戒 50%</span>
+                  <span class="text-rose-500">紅線 &gt;65%</span>
+                </div>
+              </div>
+
+              <!-- 3. 聯徵信用分數 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>3. 聯徵信用分數 (Credit Score)</span>
+                  <span id="label-credit-score" class="font-mono font-bold text-cyan-400">720 分</span>
+                </div>
+                <input type="range" id="input-credit-score" min="200" max="800" value="720" step="5" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>200 (劣)</span>
+                  <span class="text-cyan-400">門檻 650</span>
+                  <span>800 (極優)</span>
+                </div>
+              </div>
+
+              <!-- 4. 信用卡全額繳清率 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>4. 近1年信用卡全額繳清率</span>
+                  <span id="label-card-payoff" class="font-mono font-bold text-cyan-400">100 %</span>
+                </div>
+                <input type="range" id="input-card-payoff" min="20" max="100" value="100" step="2" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+              </div>
+
+              <!-- 5. 近半年聯徵被查次數 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>5. 近半年聯徵被查次數</span>
+                  <span id="label-inquiries" class="font-mono font-bold text-cyan-400">1 次</span>
+                </div>
+                <input type="range" id="input-inquiries" min="0" max="8" value="1" step="1" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>0~2 次 (正常)</span>
+                  <span class="text-rose-400">≥4 次 (急迫缺錢警示)</span>
+                </div>
+              </div>
+
+              <!-- 6. 現職年資 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>6. 現職工作年資 (Tenure)</span>
+                  <span id="label-tenure" class="font-mono font-bold text-cyan-400">5.5 年</span>
+                </div>
+                <input type="range" id="input-tenure" min="0.2" max="20" value="5.5" step="0.5" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+              </div>
+
+              <!-- 7. 職業類別 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <span class="text-slate-300 block">7. 職業類別 (Occupation Tier)</span>
+                <select id="input-occupation" onchange="runUnderwrite()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+                  <option value="tier1">公教人員 / 上市櫃500強高階主管 (Tier 1)</option>
+                  <option value="tier2" selected>一般中小企業上班族 / 專業技術職員 (Tier 2)</option>
+                  <option value="tier3">自營商 / 自由業 / 專案接案者 (Tier 3)</option>
+                  <option value="tier4">高波動/派遣/非典型就業者 (Tier 4)</option>
+                </select>
+              </div>
+
+              <!-- 8. 本行總往來資產 AUM -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>8. 本行往來資產 (AUM)</span>
+                  <span id="label-aum" class="font-mono font-bold text-cyan-400">80 萬元</span>
+                </div>
+                <input type="range" id="input-aum" min="0" max="600" value="80" step="10" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+              </div>
+
+              <!-- 9. 申貸額度 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <div class="flex justify-between text-slate-300">
+                  <span>9. 申請額度 (Requested Amount)</span>
+                  <span id="label-req-amount" class="font-mono font-bold text-cyan-400">80 萬元</span>
+                </div>
+                <input type="range" id="input-req-amount" min="10" max="300" value="80" step="5" oninput="runUnderwrite()" class="w-full accent-cyan-500 cursor-pointer">
+              </div>
+
+              <!-- 10. 貸款用途 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80 space-y-1">
+                <span class="text-slate-300 block">10. 申貸資金用途 (Purpose)</span>
+                <select id="input-purpose" onchange="runUnderwrite()" class="w-full bg-slate-900 border border-slate-700 rounded-lg p-1.5 text-xs text-white focus:outline-none focus:border-cyan-400">
+                  <option value="home">購屋修繕 / 裝潢週轉 (低風險)</option>
+                  <option value="invest" selected>投資理財 / 資產配置 (中低風險)</option>
+                  <option value="business">自營事業週轉 / 擴充設備 (中度風險)</option>
+                  <option value="debt">信用卡與高利他行債務整合 (高風險照會)</option>
+                </select>
+              </div>
+            </div>
+          </div>
+
+          <!-- Realtime Underwrite Result & Trace Card (5 Cols) -->
+          <div class="lg:col-span-5 space-y-4">
+            <!-- Verdict Badge Card -->
+            <div id="verdict-card" class="bg-slate-900 p-5 rounded-2xl border-2 border-emerald-500 shadow-xl relative overflow-hidden transition-all duration-300">
+              <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                <span class="text-[11px] font-bold uppercase tracking-wider text-slate-400 font-mono">Decision Output</span>
+                <span id="verdict-tag" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40">
+                  綠燈：核准貸款
+                </span>
+              </div>
+
+              <div class="my-4 text-center">
+                <div id="verdict-icon-box" class="w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl shadow-lg mb-2">
+                  <i data-lucide="check-circle-2" class="w-8 h-8"></i>
+                </div>
+                <h3 id="verdict-title" class="text-xl sm:text-2xl font-black text-white">核發信貸許可 (Approved)</h3>
+                <p id="verdict-subtitle" class="text-xs text-emerald-400 mt-1">風險分級：低風險優良客群 (Tier A)</p>
+              </div>
+
+              <!-- Approved Terms / Conditions Box -->
+              <div id="verdict-terms-box" class="bg-slate-950/80 p-3 rounded-xl border border-slate-800 text-xs space-y-2 font-mono">
+                <div class="flex justify-between">
+                  <span class="text-slate-400">建議核貸額度：</span>
+                  <span id="out-limit" class="font-bold text-white">80 萬元 (全額准貸)</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">適用優惠年利率：</span>
+                  <span id="out-rate" class="font-bold text-emerald-400">2.18 % ~ 2.45 %</span>
+                </div>
+                <div class="flex justify-between">
+                  <span class="text-slate-400">月還款負擔估算：</span>
+                  <span id="out-monthly-pay" class="text-slate-300">約 10,280 元 (84期)</span>
+                </div>
+              </div>
+
+              <!-- Warnings or Red Lines -->
+              <div id="verdict-warning-box" class="hidden mt-3 p-3 rounded-xl border text-xs leading-relaxed">
+                <!-- Dynamically filled with reasons or requirements -->
+              </div>
+            </div>
+
+            <!-- Trace Path & Audit Document -->
+            <div class="bg-slate-900 border border-slate-800 rounded-2xl p-4 space-y-2.5 shadow-xl">
+              <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                  <i data-lucide="git-commit" class="w-3.5 h-3.5 text-cyan-400"></i>
+                  <span>授信審批說明書與推導走訪路徑 (Trace Path)</span>
+                </span>
+                <span class="text-[10px] text-cyan-400 font-mono">法規與稽核透明白箱</span>
+              </div>
+              <div id="trace-path-container" class="space-y-1.5 text-[11px] font-mono text-slate-300 pl-2 border-l-2 border-cyan-500/60 leading-relaxed max-h-48 overflow-y-auto">
+                <!-- Injected steps -->
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- MODE 2: 精準電銷雷達與優良客群推薦 (Sales Lead Generator)        -->
+      <!-- ============================================================== -->
+      <section id="mode-panel-2" class="space-y-4 hidden">
+        <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[11px] rounded border border-emerald-500/20 font-mono">Sales Intelligence</span>
+              <h2 class="text-base sm:text-lg font-bold text-white">存戶主動電銷信貸商機雷達 (Top VIP Leads)</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">系統自動以信用決策樹遍歷 45 位存戶，篩選出「低風險、還款能力高但無信貸」的行銷名單，提供專屬電銷說帖。</p>
+          </div>
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="px-2.5 py-1 bg-slate-950 border border-slate-800 rounded-lg text-slate-300">
+              今日鎖定金質名單：<strong class="text-emerald-400" id="lead-count-badge">16 位</strong>
+            </span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- Leads Table (7 Cols) -->
+          <div class="lg:col-span-7 bg-slate-900 border border-slate-800 rounded-2xl overflow-hidden flex flex-col justify-between">
+            <div class="p-3 border-b border-slate-800 flex justify-between items-center bg-slate-950/60">
+              <span class="text-xs font-bold text-slate-300 flex items-center gap-1.5">
+                <i data-lucide="users" class="w-4 h-4 text-cyan-400"></i>
+                <span>VIP 存戶潛力信用評等清單 (點選查看說帖)</span>
+              </span>
+              <div class="flex gap-1 text-[11px]">
+                <button onclick="filterLeads('all')" id="btn-lead-all" class="px-2 py-0.5 rounded bg-cyan-600 text-white font-bold">全部存戶</button>
+                <button onclick="filterLeads('vip')" id="btn-lead-vip" class="px-2 py-0.5 rounded text-slate-400 hover:text-white">高潛力電銷 (VIP)</button>
+              </div>
+            </div>
+
+            <div class="overflow-x-auto max-h-[460px] custom-scrollbar">
+              <table class="w-full text-left text-xs">
+                <thead class="bg-slate-950 text-slate-400 font-mono text-[11px] border-b border-slate-800 sticky top-0">
+                  <tr>
+                    <th class="p-2.5">客戶姓名</th>
+                    <th class="p-2.5">信用分</th>
+                    <th class="p-2.5">年收入</th>
+                    <th class="p-2.5">本行AUM</th>
+                    <th class="p-2.5">負債比</th>
+                    <th class="p-2.5">推薦狀態</th>
+                    <th class="p-2.5 text-center">操作</th>
+                  </tr>
+                </thead>
+                <tbody id="leads-table-body" class="divide-y divide-slate-800/60 text-slate-300">
+                  <!-- Populated by JS -->
+                </tbody>
+              </table>
+            </div>
+
+            <div class="p-2.5 bg-slate-950 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
+              <span>💡 綠標代表決策樹認定之最純淨低風險資產客群，電銷成功率最高。</span>
+              <span id="leads-summary-text">顯示 45 筆</span>
+            </div>
+          </div>
+
+          <!-- Sales Pitch & Recommended Package Drawer (5 Cols) -->
+          <div class="lg:col-span-5 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center pb-2.5 border-b border-slate-800">
+              <div class="flex items-center space-x-2">
+                <span id="lead-card-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">
+                  Top Priority Lead
+                </span>
+                <h3 id="lead-card-name" class="font-bold text-white text-base">林雅婷 (醫師/高資產)</h3>
+              </div>
+              <button onclick="injectCurrentLeadToMode1()" title="將此客戶帶入臨櫃沙盒試算" class="px-2.5 py-1 bg-cyan-600/80 hover:bg-cyan-600 text-white rounded text-xs font-semibold flex items-center gap-1 transition">
+                <i data-lucide="arrow-right-circle" class="w-3.5 h-3.5"></i>
+                <span>帶入臨櫃審批</span>
+              </button>
+            </div>
+
+            <!-- Profile Stats Grid -->
+            <div class="grid grid-cols-2 gap-2 text-xs font-mono">
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">聯徵信用分 / DTI</span>
+                <span id="lead-stat-score-dti" class="text-emerald-400 font-bold text-sm">780分 | DTI 18%</span>
+              </div>
+              <div class="bg-slate-950 p-2.5 rounded-xl border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">年收入 / 本行資產AUM</span>
+                <span id="lead-stat-income-aum" class="text-cyan-400 font-bold text-sm">260萬 | AUM 320萬</span>
+              </div>
+            </div>
+
+            <!-- Tailored Offer Package -->
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-cyan-500/30 space-y-1.5">
+              <span class="text-xs font-bold text-cyan-300 flex items-center gap-1.5">
+                <i data-lucide="gift" class="w-4 h-4"></i>
+                <span>推薦信貸專屬專案包 (Tailored Package)</span>
+              </span>
+              <div id="lead-product-title" class="font-bold text-white text-sm">尊爵白金首選信貸（首期 0.01% / 最高 250 萬）</div>
+              <p id="lead-product-desc" class="text-[11px] text-slate-400 leading-relaxed">
+                專屬名醫與公教頂級客群，免開辦費，隨借隨還不綁約，最適合短期投資理財靈活調度。
+              </p>
+            </div>
+
+            <!-- Script / Sales Pitch Generator -->
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2">
+              <div class="flex justify-between items-center">
+                <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                  <i data-lucide="message-square" class="w-3.5 h-3.5"></i>
+                  <span>AI 電銷業務通話說帖 (Sales Pitch Script)</span>
+                </span>
+                <button onclick="copySalesPitch()" class="text-[10px] text-slate-400 hover:text-white flex items-center gap-1">
+                  <i data-lucide="copy" class="w-3 h-3"></i> 複製話術
+                </button>
+              </div>
+              <div id="lead-pitch-text" class="text-xs text-slate-300 leading-relaxed bg-slate-900 p-3 rounded-lg border border-slate-800/80 select-all">
+                「林醫師您好，我是○○銀行您的專屬理財專員。感謝您長期將主力資產託管於本行，觀察到您信用評等極為卓越。本季總行特別為您核定一筆 250 萬元的預審備用金，首期年利率僅 0.01%，平時不借不用付利息，隨時作為您診所設備升級或理財資金後盾，今天為您啟動額度好嗎？」
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- MODE 3: 互動視覺化信用決策樹 (Interactive Credit Tree Visualizer)-->
+      <!-- ============================================================== -->
+      <section id="mode-panel-3" class="space-y-4 hidden">
+        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+          <div>
+            <h2 class="text-base sm:text-lg font-bold text-white">信用風險評估決策樹結構全景圖 (Credit Decision Topology)</h2>
+            <p class="text-xs text-slate-400">以金融聯徵大數據訓練之二元分類樹。在模式一調動參數時，此樹將即時動態發光高亮（Trace Glowing）對應分流分支。</p>
+          </div>
+          <div class="flex items-center space-x-2 text-xs">
+            <span class="inline-flex items-center gap-1 text-slate-300"><span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span> 決策分割點</span>
+            <span class="inline-flex items-center gap-1 text-slate-300 ml-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 核貸葉節點</span>
+            <span class="inline-flex items-center gap-1 text-slate-300 ml-2"><span class="w-2.5 h-2.5 rounded-full bg-rose-500"></span> 婉拒葉節點</span>
+          </div>
+        </div>
+
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- SVG Visual Tree (8 Cols) -->
+          <div class="lg:col-span-8 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col items-center justify-center overflow-x-auto min-h-[460px]">
+            <svg id="credit-tree-svg" class="w-full h-[440px] select-none min-w-[620px]" viewBox="0 0 720 440"></svg>
+          </div>
+
+          <!-- Node Inspection Drawer (4 Cols) -->
+          <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
+            <div class="flex justify-between items-center pb-2.5 border-b border-slate-800">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400 font-mono">Node Inspector</span>
+              <span id="m3-inspect-id" class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                Root Node
+              </span>
+            </div>
+
+            <div>
+              <h3 id="m3-inspect-title" class="font-bold text-white text-base">聯徵信用分數 ≥ 650 分?</h3>
+              <p id="m3-inspect-condition" class="text-xs text-cyan-400 mt-0.5 font-mono">資訊獲取量 IG = 0.5120 | 最具鑑別力</p>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-2 gap-2.5 font-mono text-xs">
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">涵蓋樣本數 (N)</span>
+                <span id="m3-inspect-samples" class="text-white font-bold text-base">45 位</span>
+              </div>
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                <span class="text-slate-400 block text-[10px]">預期違約率 (Default Rate)</span>
+                <span id="m3-inspect-default" class="text-rose-400 font-bold text-base">15.5 %</span>
+              </div>
+            </div>
+
+            <!-- Composition -->
+            <div class="space-y-1.5">
+              <span class="text-xs font-bold text-slate-300">節點內授信分佈結構：</span>
+              <div class="w-full bg-slate-950 rounded-full h-3 flex overflow-hidden border border-slate-800">
+                <div id="m3-bar-pass" style="width: 60%" class="bg-emerald-500 h-full"></div>
+                <div id="m3-bar-review" style="width: 20%" class="bg-amber-500 h-full"></div>
+                <div id="m3-bar-reject" style="width: 20%" class="bg-rose-500 h-full"></div>
+              </div>
+              <div class="flex justify-between text-[10px] text-slate-400 font-mono">
+                <span class="text-emerald-400" id="m3-text-pass">核准: 60%</span>
+                <span class="text-amber-400" id="m3-text-review">照會: 20%</span>
+                <span class="text-rose-400" id="m3-text-reject">婉拒: 20%</span>
+              </div>
+            </div>
+
+            <!-- Legal and Risk Note -->
+            <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1 leading-relaxed">
+              <strong class="text-slate-200 block">消金風控與金融法規意涵：</strong>
+              <p id="m3-inspect-desc">
+                聯徵中心信用分數統計 200~800 分，低於 650 分族群之信用卡循環動用與遲延繳納機率顯著暴增，故演算法優先以此進行根節點切分。
+              </p>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============================================================== -->
+      <!-- MODE 4: 風控與行銷指標量化看板 (Risk & Revenue Dashboard)        -->
+      <!-- ============================================================== -->
+      <section id="mode-panel-4" class="space-y-4 hidden">
+        <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+          <div>
+            <div class="flex items-center space-x-2">
+              <span class="px-2 py-0.5 bg-amber-500/10 text-amber-400 text-[11px] rounded border border-amber-500/20 font-mono">Portfolio Intelligence</span>
+              <h2 class="text-base sm:text-lg font-bold text-white">消金資產授信效益與壞帳風險權衡模擬看板</h2>
+            </div>
+            <p class="text-xs text-slate-400 mt-0.5">滑動風控嚴格度門檻（信用分數底線與 DTI 上限），動態觀察核貸率、不良貸款率 (NPL) 與利息收益之消長。</p>
+          </div>
+        </div>
+
+        <!-- 4 Top KPI Cards -->
+        <div class="grid grid-cols-2 md:grid-cols-4 gap-3.5">
+          <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow">
+            <span class="text-slate-400 text-xs block">全行核貸通過率 (Approval Rate)</span>
+            <div class="text-2xl font-black text-white font-num mt-1" id="dash-approval-rate">68.9 %</div>
+            <span class="text-[10px] text-emerald-400">健康營運常態</span>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow">
+            <span class="text-slate-400 text-xs block">預估逾放不良貸款率 (NPL Rate)</span>
+            <div class="text-2xl font-black text-emerald-400 font-num mt-1" id="dash-npl-rate">1.18 %</div>
+            <span class="text-[10px] text-slate-400">法規紅線 3.0%</span>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow">
+            <span class="text-slate-400 text-xs block">電銷鎖定目標商機授信池</span>
+            <div class="text-2xl font-black text-cyan-400 font-num mt-1" id="dash-loan-pool">3,480 萬</div>
+            <span class="text-[10px] text-cyan-500">16 位優質 VIP 存戶</span>
+          </div>
+          <div class="bg-slate-900 p-4 rounded-2xl border border-slate-800 shadow">
+            <span class="text-slate-400 text-xs block">預估年度信貸利息收益</span>
+            <div class="text-2xl font-black text-amber-400 font-num mt-1" id="dash-annual-revenue">82.4 萬元</div>
+            <span class="text-[10px] text-amber-500">以平均 2.38% 計收</span>
+          </div>
+        </div>
+
+        <!-- Interactive Policy Sliders & Charts -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+          <!-- Policy Sliders (4 Cols) -->
+          <div class="lg:col-span-4 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl">
+            <h3 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5 pb-2 border-b border-slate-800">
+              <i data-lucide="sliders-horizontal" class="w-4 h-4 text-cyan-400"></i>
+              <span>總行風控政策門檻調控 (Policy Tuning)</span>
+            </h3>
+
+            <div class="space-y-4 text-xs">
+              <!-- Threshold 1: 信用分數切分點 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">信用分數切分底線 (Credit Cutoff)</span>
+                  <span id="slider-val-score" class="font-mono font-bold text-cyan-400">650 分</span>
+                </div>
+                <input type="range" id="policy-score-slider" min="580" max="720" value="650" step="10" oninput="updatePolicyDashboard()" class="w-full accent-cyan-500 cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>580 (擴張寬鬆)</span>
+                  <span>720 (保守嚴格)</span>
+                </div>
+              </div>
+
+              <!-- Threshold 2: DTI 限制 -->
+              <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 space-y-1.5">
+                <div class="flex justify-between">
+                  <span class="text-slate-300">最高負債比容忍上限 (DTI Cap)</span>
+                  <span id="slider-val-dti" class="font-mono font-bold text-cyan-400">55 %</span>
+                </div>
+                <input type="range" id="policy-dti-slider" min="40" max="70" value="55" step="2" oninput="updatePolicyDashboard()" class="w-full accent-cyan-500 cursor-pointer">
+                <div class="flex justify-between text-[10px] text-slate-500">
+                  <span>40% (高度緊縮)</span>
+                  <span>70% (放寬門檻)</span>
+                </div>
+              </div>
+
+              <!-- Tradeoff Narrative Box -->
+              <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 text-xs text-slate-300 space-y-1.5 leading-relaxed">
+                <strong class="text-amber-400 flex items-center gap-1">
+                  <i data-lucide="alert-circle" class="w-3.5 h-3.5"></i> 風險與商機拉扯機制：
+                </strong>
+                <p id="policy-tradeoff-desc">
+                  調嚴標準（如信用分調至 680）能降低不良放款至 0.8%，但會造成約 15% 的優質客戶被誤殺婉拒（商機流失）；放寬門檻則能衝刺放款量，但壞帳提撥將侵蝕淨利。
+                </p>
+              </div>
+            </div>
+          </div>
+
+          <!-- Chart Visualizations (8 Cols) -->
+          <div class="lg:col-span-8 bg-slate-900 border border-slate-800 rounded-2xl p-5 space-y-4 shadow-xl flex flex-col justify-between">
+            <div class="flex justify-between items-center pb-2 border-b border-slate-800">
+              <span class="text-xs font-bold text-white flex items-center gap-1.5">
+                <i data-lucide="bar-chart-3" class="w-4 h-4 text-emerald-400"></i>
+                <span>核准族群 vs. 拒貸族群之信用與負債分佈透視</span>
+              </span>
+              <span class="text-[10px] text-slate-400">即時模擬動態重繪</span>
+            </div>
+
+            <div class="h-64 relative">
+              <canvas id="policyChart"></canvas>
+            </div>
+
+            <div class="grid grid-cols-3 gap-2 text-center text-xs font-mono pt-2 border-t border-slate-800">
+              <div class="bg-slate-950 p-2 rounded-lg">
+                <span class="text-slate-400 text-[10px] block">預估核准案件數</span>
+                <span id="stat-cases-pass" class="text-emerald-400 font-bold">31 件 (68.9%)</span>
+              </div>
+              <div class="bg-slate-950 p-2 rounded-lg">
+                <span class="text-slate-400 text-[10px] block">人工照會審查件</span>
+                <span id="stat-cases-review" class="text-amber-400 font-bold">8 件 (17.8%)</span>
+              </div>
+              <div class="bg-slate-950 p-2 rounded-lg">
+                <span class="text-slate-400 text-[10px] block">婉拒阻斷案件數</span>
+                <span id="stat-cases-reject" class="text-rose-400 font-bold">6 件 (13.3%)</span>
+              </div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-slate-900/90 border-t border-slate-800 py-2.5 px-4 text-center text-xs text-slate-500 shrink-0">
+    BankTree Insight &copy; 2026 | 金融消金授信風控與白箱決策樹智慧系統 • 遵循金管會金檢與公平待客原則
+  </footer>
+
+  <!-- ============================================================== -->
+  <!-- APPLICATION SCRIPT & DECISION LOGIC                           -->
+  <!-- ============================================================== -->
+  <script>
+    // -------------------------------------------------------------
+    // 1. DATASET: 45 Simulated Bank Customers with Rich Dimensions
+    // -------------------------------------------------------------
+    const CUSTOMER_DATABASE = [
+      { id: 101, name: "林雅婷", job: "專科名醫", income: 280, dti: 16, score: 785, payoff: 100, inq: 0, tenure: 9.0, occ: "tier1", aum: 350, req: 200, purpose: "invest", isVip: true },
+      { id: 102, name: "陳冠宇", job: "國立高中教師", income: 110, dti: 24, score: 750, payoff: 100, inq: 1, tenure: 11.5, occ: "tier1", aum: 120, req: 80, purpose: "home", isVip: true },
+      { id: 103, name: "黃振華", job: "精密機械自營商", income: 320, dti: 28, score: 730, payoff: 98, inq: 1, tenure: 14.0, occ: "tier3", aum: 480, req: 250, purpose: "business", isVip: true },
+      { id: 104, name: "張家豪", job: "半導體資深主任工程師", income: 210, dti: 22, score: 760, payoff: 100, inq: 0, tenure: 7.0, occ: "tier1", aum: 220, req: 150, purpose: "invest", isVip: true },
+      { id: 105, name: "吳佩珊", job: "會計師事務所合夥人", income: 190, dti: 20, score: 740, payoff: 100, inq: 1, tenure: 8.0, occ: "tier1", aum: 180, req: 100, purpose: "home", isVip: true },
+      { id: 106, name: "李志強", job: "電商倉儲自營主", income: 160, dti: 48, score: 685, payoff: 92, inq: 2, tenure: 5.0, occ: "tier3", aum: 90, req: 100, purpose: "business", isVip: false },
+      { id: 107, name: "周彥廷", job: "軟體前端工程師", income: 95, dti: 35, score: 690, payoff: 95, inq: 1, tenure: 3.5, occ: "tier2", aum: 45, req: 50, purpose: "invest", isVip: true },
+      { id: 108, name: "蔡孟潔", job: "公立醫院護理長", income: 105, dti: 26, score: 735, payoff: 100, inq: 0, tenure: 12.0, occ: "tier1", aum: 85, req: 60, purpose: "home", isVip: true },
+      { id: 109, name: "許瑋倫", job: "品牌連鎖加盟店長", income: 130, dti: 52, score: 660, payoff: 88, inq: 3, tenure: 4.0, occ: "tier2", aum: 30, req: 80, purpose: "business", isVip: false },
+      { id: 110, name: "趙崇凱", job: "廣告接案自由導演", income: 140, dti: 42, score: 675, payoff: 90, inq: 2, tenure: 6.0, occ: "tier3", aum: 65, req: 70, purpose: "invest", isVip: false },
+      { id: 111, name: "郭廷威", job: "科技大廠法務主管", income: 175, dti: 25, score: 755, payoff: 100, inq: 0, tenure: 6.5, occ: "tier1", aum: 140, req: 120, purpose: "home", isVip: true },
+      { id: 112, name: "曾怡君", job: "銀行資深理專", income: 145, dti: 28, score: 740, payoff: 100, inq: 1, tenure: 7.0, occ: "tier1", aum: 110, req: 80, purpose: "invest", isVip: true },
+      { id: 113, name: "廖宏偉", job: "外送員兼自營網拍", income: 65, dti: 68, score: 580, payoff: 60, inq: 5, tenure: 1.5, occ: "tier4", aum: 5, req: 40, purpose: "debt", isVip: false },
+      { id: 114, name: "洪語桐", job: "國中公立輔導教師", income: 98, dti: 20, score: 745, payoff: 100, inq: 0, tenure: 8.5, occ: "tier1", aum: 95, req: 50, purpose: "home", isVip: true },
+      { id: 115, name: "邱俊傑", job: "連鎖餐飲廚師", income: 72, dti: 46, score: 640, payoff: 80, inq: 2, tenure: 3.0, occ: "tier2", aum: 20, req: 30, purpose: "debt", isVip: false },
+      { id: 116, name: "賴品瑄", job: "知名插畫設計師", income: 115, dti: 30, score: 710, payoff: 96, inq: 1, tenure: 5.0, occ: "tier3", aum: 80, req: 60, purpose: "invest", isVip: true },
+      { id: 117, name: "徐若萱", job: "醫學中心藥師", income: 110, dti: 22, score: 765, payoff: 100, inq: 0, tenure: 9.0, occ: "tier1", aum: 130, req: 70, purpose: "home", isVip: true },
+      { id: 118, name: "蘇承恩", job: "營造工程行老闆", income: 240, dti: 38, score: 705, payoff: 92, inq: 2, tenure: 10.0, occ: "tier3", aum: 210, req: 180, purpose: "business", isVip: true },
+      { id: 119, name: "葉姿妤", job: "大學助理教授", income: 125, dti: 25, score: 755, payoff: 100, inq: 0, tenure: 6.0, occ: "tier1", aum: 115, req: 80, purpose: "invest", isVip: true },
+      { id: 120, name: "莊宇哲", job: "直播帶貨實況主", income: 180, dti: 62, score: 610, payoff: 75, inq: 4, tenure: 2.0, occ: "tier4", aum: 15, req: 120, purpose: "debt", isVip: false },
+      { id: 121, name: "何詠晴", job: "外商精品行銷總監", income: 230, dti: 19, score: 775, payoff: 100, inq: 0, tenure: 8.0, occ: "tier1", aum: 260, req: 150, purpose: "home", isVip: true },
+      { id: 122, name: "蕭達康", job: "計程車司機", income: 58, dti: 66, score: 570, payoff: 58, inq: 5, tenure: 4.0, occ: "tier4", aum: 8, req: 30, purpose: "debt", isVip: false },
+      { id: 123, name: "潘芷萱", job: "國小英語公立教員", income: 92, dti: 21, score: 740, payoff: 100, inq: 1, tenure: 7.0, occ: "tier1", aum: 70, req: 50, purpose: "home", isVip: true },
+      { id: 124, name: "羅紹齊", job: "汽機車維修廠負責人", income: 150, dti: 36, score: 695, payoff: 94, inq: 1, tenure: 12.0, occ: "tier3", aum: 95, req: 90, purpose: "business", isVip: false },
+      { id: 125, name: "柯亭安", job: "上市櫃人資專案主管", income: 105, dti: 29, score: 715, payoff: 98, inq: 1, tenure: 5.5, occ: "tier1", aum: 55, req: 60, purpose: "home", isVip: true },
+      { id: 126, name: "方俊堯", job: "中古車行業務專員", income: 85, dti: 58, score: 620, payoff: 72, inq: 3, tenure: 2.5, occ: "tier2", aum: 12, req: 50, purpose: "debt", isVip: false },
+      { id: 127, name: "卓冠廷", job: "知名牙醫診所主治", income: 290, dti: 15, score: 790, payoff: 100, inq: 0, tenure: 10.0, occ: "tier1", aum: 390, req: 200, purpose: "invest", isVip: true },
+      { id: 128, name: "高千惠", job: "金融控股總部稽核", income: 135, dti: 24, score: 760, payoff: 100, inq: 0, tenure: 7.0, occ: "tier1", aum: 105, req: 70, purpose: "home", isVip: true },
+      { id: 129, name: "游宗翰", job: "餐飲攤商個體戶", income: 68, dti: 64, score: 590, payoff: 65, inq: 4, tenure: 3.0, occ: "tier4", aum: 10, req: 30, purpose: "debt", isVip: false },
+      { id: 130, name: "鍾秉睿", job: "補習班金牌名師", income: 200, dti: 26, score: 725, payoff: 96, inq: 1, tenure: 8.0, occ: "tier2", aum: 170, req: 130, purpose: "invest", isVip: true },
+      { id: 131, name: "童詩涵", job: "大型物流調度員", income: 62, dti: 44, score: 660, payoff: 85, inq: 2, tenure: 4.0, occ: "tier2", aum: 15, req: 25, purpose: "home", isVip: false },
+      { id: 132, name: "韓立祥", job: "公務機關資訊主管", income: 120, dti: 20, score: 755, payoff: 100, inq: 0, tenure: 13.0, occ: "tier1", aum: 130, req: 80, purpose: "home", isVip: true },
+      { id: 133, name: "馮怡君", job: "建築師事務所資深合夥", income: 220, dti: 23, score: 745, payoff: 100, inq: 1, tenure: 9.0, occ: "tier1", aum: 240, req: 150, purpose: "invest", isVip: true },
+      { id: 134, name: "余建宏", job: "手搖飲連鎖加盟業主", income: 170, dti: 45, score: 670, payoff: 88, inq: 2, tenure: 5.5, occ: "tier3", aum: 85, req: 100, purpose: "business", isVip: false },
+      { id: 135, name: "陸語萱", job: "公立圖書館編審", income: 80, dti: 22, score: 735, payoff: 100, inq: 0, tenure: 9.0, occ: "tier1", aum: 60, req: 40, purpose: "home", isVip: true },
+      { id: 136, name: "戴政廷", job: "高爾夫球具代理商", income: 270, dti: 32, score: 715, payoff: 95, inq: 1, tenure: 11.0, occ: "tier3", aum: 290, req: 160, purpose: "invest", isVip: true },
+      { id: 137, name: "顏雅筑", job: "空服員訓練教官", income: 115, dti: 27, score: 730, payoff: 98, inq: 1, tenure: 8.5, occ: "tier2", aum: 75, req: 60, purpose: "home", isVip: true },
+      { id: 138, name: "歐陽睿", job: "連鎖健身房教練主管", income: 130, dti: 36, score: 685, payoff: 90, inq: 2, tenure: 4.5, occ: "tier2", aum: 50, req: 70, purpose: "invest", isVip: false },
+      { id: 139, name: "盧信良", job: "卡車長途貨運司機", income: 75, dti: 54, score: 615, payoff: 74, inq: 3, tenure: 5.0, occ: "tier4", aum: 12, req: 40, purpose: "debt", isVip: false },
+      { id: 140, name: "白語欣", job: "知名會計師", income: 160, dti: 21, score: 750, payoff: 100, inq: 0, tenure: 6.0, occ: "tier1", aum: 125, req: 90, purpose: "home", isVip: true },
+      { id: 141, name: "沈柏均", job: "生鮮食品批發商", income: 195, dti: 40, score: 690, payoff: 92, inq: 2, tenure: 7.0, occ: "tier3", aum: 110, req: 110, purpose: "business", isVip: false },
+      { id: 142, name: "謝孟潔", job: "大學副教授", income: 130, dti: 24, score: 760, payoff: 100, inq: 0, tenure: 7.5, occ: "tier1", aum: 120, req: 70, purpose: "home", isVip: true },
+      { id: 143, name: "邱思妤", job: "美甲沙龍負責人", income: 88, dti: 49, score: 655, payoff: 86, inq: 3, tenure: 4.0, occ: "tier3", aum: 28, req: 45, purpose: "debt", isVip: false },
+      { id: 144, name: "施詠心", job: "金控儲備幹部(MA)", income: 110, dti: 25, score: 725, payoff: 100, inq: 1, tenure: 3.0, occ: "tier1", aum: 40, req: 50, purpose: "invest", isVip: true },
+      { id: 145, name: "陳建志", job: "連鎖餐飲儲備店長", income: 68, dti: 59, score: 625, payoff: 78, inq: 3, tenure: 2.5, occ: "tier2", aum: 14, req: 35, purpose: "debt", isVip: false }
+    ];
+
+    let currentSelectedLead = CUSTOMER_DATABASE[0];
+
+    // -------------------------------------------------------------
+    // 2. DECISION TREE ENGINE & TRAVERSAL (Strict Banking Logic)
+    // -------------------------------------------------------------
+    function evaluateCreditRisk(data) {
+      const trace = [];
+      let decision = 'green'; // 'green', 'yellow', 'red'
+      let activePath = [];    // Node IDs for glowing SVG
+      let reason = '';
+      let suggestedLimit = data.req;
+      let minRate = 2.18;
+      let maxRate = 2.65;
+
+      trace.push(`[根節點 Root] 審核聯徵信用分數 = ${data.score} 分`);
+      activePath.push('root');
+
+      // 1. Root: Credit Score check
+      if (data.score < 650) {
+        // Left Branch: Subprime / High Risk Domain
+        activePath.push('edge-root-left');
+        activePath.push('node-score-low');
+        trace.push(`➔ 信用分 < 650 分 (落入次級信用群)，走向 [節點 2：負債比 DTI 檢查]`);
+
+        trace.push(`[節點 2] 檢查總負債比率 DTI = ${data.dti}%`);
+        if (data.dti > 60 || data.inq >= 4) {
+          activePath.push('edge-n2-left');
+          activePath.push('leaf-reject');
+          decision = 'red';
+          trace.push(`➔ 觸發雙重風控紅線 (DTI > 60% 且/或 聯徵查詢 ≥ 4次)！直接落入 [葉節點：婉拒申請]`);
+          reason = `觸犯嚴重風控紅線：申請人 DTI 為 ${data.dti}% (門檻 60%)，且近半年被查詢 ${data.inq} 次，顯示資金缺口短急且償債能力已嚴重透支。`;
+        } else {
+          activePath.push('edge-n2-right');
+          activePath.push('leaf-review');
+          decision = 'yellow';
+          trace.push(`➔ DTI ≤ 60% 且查詢未暴增，落入 [葉節點：人工照會／加強審查]`);
+          reason = `申請人信用分數偏低 (${data.score}分)，需啟動二級審查：要求徵提連帶保證人、近六個月完整薪轉活存內頁，或核給額度下修 30%。`;
+          suggestedLimit = Math.round(data.req * 0.7);
+          minRate = 3.65;
+          maxRate = 4.88;
+        }
+
+      } else {
+        // Right Branch: Prime Domain (score >= 650)
+        activePath.push('edge-root-right');
+        activePath.push('node-score-high');
+        trace.push(`➔ 信用分 ≥ 650 分 (優良信用基準)，走向 [節點 3：負債比與資產防護]`);
+
+        trace.push(`[節點 3] 審核負債比率 DTI = ${data.dti}% (基準門檻 45%)`);
+        if (data.dti <= 45) {
+          // Excellent segment
+          activePath.push('edge-n3-left');
+          activePath.push('node-aum');
+          trace.push(`➔ DTI ≤ 45% (安全負債區)，走向 [節點 4：本行往來資產 AUM 與職業階層]`);
+
+          trace.push(`[節點 4] 檢視本行 AUM = ${data.aum} 萬，職業層級 = ${data.occ}`);
+          if (data.aum >= 80 || data.occ === 'tier1') {
+            activePath.push('edge-n4-left');
+            activePath.push('leaf-vip-pass');
+            decision = 'green';
+            trace.push(`➔ 具備高資產防護 (AUM≥80萬) 或 公教500強資質，落入 [葉節點：尊爵綠燈 全額核准]`);
+            suggestedLimit = data.req;
+            minRate = 1.88;
+            maxRate = 2.25;
+            reason = "黃金優良客群：資產雄厚、工作極穩定且具備深厚信用紀律，享有最優尊爵信貸定價。";
+          } else {
+            activePath.push('edge-n4-right');
+            activePath.push('leaf-std-pass');
+            decision = 'green';
+            trace.push(`➔ 職收正常平穩，落入 [葉節點：標準綠燈 核准]`);
+            suggestedLimit = data.req;
+            minRate = 2.18;
+            maxRate = 2.58;
+            reason = "優良常態客群：負債在安全水位且信用清白，全額核准。";
+          }
+
+        } else {
+          // DTI > 45% in good credit
+          activePath.push('edge-n3-right');
+          activePath.push('node-inquiry');
+          trace.push(`➔ DTI > 45% (負債略偏高)，走向 [節點 5：近半年被查次數與還款紀錄]`);
+
+          trace.push(`[節點 5] 聯徵被查次數 = ${data.inq} 次，全額繳清率 = ${data.payoff}%`);
+          if (data.inq <= 1 && data.payoff >= 95) {
+            activePath.push('edge-n5-left');
+            activePath.push('leaf-conditional-pass');
+            decision = 'green';
+            trace.push(`➔ 過去繳清習慣完美且近期無連續擴張，判定為有計畫增貸，落入 [葉節點：附條件核准]`);
+            suggestedLimit = Math.round(data.req * 0.85);
+            minRate = 2.55;
+            maxRate = 2.95;
+            reason = "負債比稍高但還款紀律極佳，建議核貸額度打 85 折或限制不得動用循環透支。";
+          } else {
+            activePath.push('edge-n5-right');
+            activePath.push('leaf-review');
+            decision = 'yellow';
+            trace.push(`➔ 近期多處借貸且負債已高，落入 [葉節點：人工照會／加強審查]`);
+            reason = "警示狀態：申請人雖信用分尚可，但 DTI 偏高且近期有多筆聯徵被查紀錄，需強制人工照會確認資金實際流向，並要求提供不動產殘值佐證。";
+            suggestedLimit = Math.round(data.req * 0.5);
+            minRate = 3.20;
+            maxRate = 4.15;
+          }
+        }
+      }
+
+      return { decision, trace, activePath, reason, suggestedLimit, minRate, maxRate };
+    }
+
+    // -------------------------------------------------------------
+    // 3. MODE 1: UNDERWRITER SANDBOX INTERACTIONS
+    // -------------------------------------------------------------
+    function getFormData() {
+      return {
+        income: parseInt(document.getElementById('input-income').value),
+        dti: parseInt(document.getElementById('input-dti').value),
+        score: parseInt(document.getElementById('input-credit-score').value),
+        payoff: parseInt(document.getElementById('input-card-payoff').value),
+        inq: parseInt(document.getElementById('input-inquiries').value),
+        tenure: parseFloat(document.getElementById('input-tenure').value),
+        occ: document.getElementById('input-occupation').value,
+        aum: parseInt(document.getElementById('input-aum').value),
+        req: parseInt(document.getElementById('input-req-amount').value),
+        purpose: document.getElementById('input-purpose').value
+      };
+    }
+
+    function runUnderwrite() {
+      const data = getFormData();
+
+      // Update Slider value displays
+      document.getElementById('label-income').innerText = `${data.income} 萬元`;
+      document.getElementById('label-dti').innerText = `${data.dti} %`;
+      document.getElementById('label-credit-score').innerText = `${data.score} 分`;
+      document.getElementById('label-card-payoff').innerText = `${data.payoff} %`;
+      document.getElementById('label-inquiries').innerText = `${data.inq} 次`;
+      document.getElementById('label-tenure').innerText = `${data.tenure} 年`;
+      document.getElementById('label-aum').innerText = `${data.aum} 萬元`;
+      document.getElementById('label-req-amount').innerText = `${data.req} 萬元`;
+
+      const result = evaluateCreditRisk(data);
+
+      // Render Verdict Card
+      const card = document.getElementById('verdict-card');
+      const tag = document.getElementById('verdict-tag');
+      const title = document.getElementById('verdict-title');
+      const subtitle = document.getElementById('verdict-subtitle');
+      const iconBox = document.getElementById('verdict-icon-box');
+      const termsBox = document.getElementById('verdict-terms-box');
+      const warnBox = document.getElementById('verdict-warning-box');
+
+      const outLimit = document.getElementById('out-limit');
+      const outRate = document.getElementById('out-rate');
+      const outMonthlyPay = document.getElementById('out-monthly-pay');
+
+      // Update Trace Path
+      const traceContainer = document.getElementById('trace-path-container');
+      traceContainer.innerHTML = result.trace.map(st => `<div>${st}</div>`).join('');
+
+      // Monthly payment formula approximation (7 years = 84 months)
+      const avgRate = (result.minRate + result.maxRate) / 2 / 100 / 12;
+      const nMonths = 84;
+      const principal = result.suggestedLimit * 10000;
+      let monthly = Math.round(principal * (avgRate * Math.pow(1 + avgRate, nMonths)) / (Math.pow(1 + avgRate, nMonths) - 1));
+      if (isNaN(monthly) || monthly <= 0) monthly = 0;
+
+      if (result.decision === 'green') {
+        card.className = "bg-slate-900 p-5 rounded-2xl border-2 border-emerald-500 shadow-xl relative overflow-hidden transition-all duration-300";
+        tag.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/40";
+        tag.innerText = "🟢 綠燈：核准貸款 (Approved)";
+        title.innerText = "核發信貸許可 (Approved)";
+        title.className = "text-xl sm:text-2xl font-black text-white";
+        subtitle.innerText = "評等判定：優良低風險客群 (Prime Tier)";
+        subtitle.className = "text-xs text-emerald-400 mt-1";
+        iconBox.className = "w-14 h-14 mx-auto rounded-2xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center text-2xl shadow-lg mb-2";
+        iconBox.innerHTML = '<i data-lucide="check-circle-2" class="w-8 h-8"></i>';
+
+        termsBox.classList.remove('hidden');
+        outLimit.innerText = `${result.suggestedLimit} 萬元 (足額核貸)`;
+        outRate.innerText = `${result.minRate.toFixed(2)} % ~ ${result.maxRate.toFixed(2)} %`;
+        outMonthlyPay.innerText = `約 ${monthly.toLocaleString()} 元 (84期)`;
+
+        warnBox.className = "mt-3 p-3 rounded-xl border border-emerald-500/30 bg-emerald-950/20 text-emerald-300 text-xs leading-relaxed";
+        warnBox.innerHTML = `<strong>審核核可備註：</strong>${result.reason}`;
+        warnBox.classList.remove('hidden');
+
+      } else if (result.decision === 'yellow') {
+        card.className = "bg-slate-900 p-5 rounded-2xl border-2 border-amber-500 shadow-xl relative overflow-hidden transition-all duration-300";
+        tag.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-500/20 text-amber-400 border border-amber-500/40";
+        tag.innerText = "🟡 黃燈：人工照會／加強審查 (Review)";
+        title.innerText = "照會補件審查 (Manual Review)";
+        title.className = "text-xl sm:text-2xl font-black text-white";
+        subtitle.innerText = "評等判定：邊際中度風險 (Marginal Tier)";
+        subtitle.className = "text-xs text-amber-400 mt-1";
+        iconBox.className = "w-14 h-14 mx-auto rounded-2xl bg-amber-500/20 text-amber-400 flex items-center justify-center text-2xl shadow-lg mb-2";
+        iconBox.innerHTML = '<i data-lucide="help-circle" class="w-8 h-8"></i>';
+
+        termsBox.classList.remove('hidden');
+        outLimit.innerText = `${result.suggestedLimit} 萬元 (額度受限下調)`;
+        outRate.innerText = `${result.minRate.toFixed(2)} % ~ ${result.maxRate.toFixed(2)} %`;
+        outMonthlyPay.innerText = `約 ${monthly.toLocaleString()} 元 (84期)`;
+
+        warnBox.className = "mt-3 p-3 rounded-xl border border-amber-500/40 bg-amber-950/30 text-amber-300 text-xs leading-relaxed";
+        warnBox.innerHTML = `<strong>⚠️ 徵信照會要求：</strong>${result.reason}`;
+        warnBox.classList.remove('hidden');
+
+      } else {
+        card.className = "bg-slate-900 p-5 rounded-2xl border-2 border-rose-500 shadow-xl relative overflow-hidden transition-all duration-300";
+        tag.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-500/20 text-rose-400 border border-rose-500/40";
+        tag.innerText = "🔴 紅燈：婉拒申請 (Rejected)";
+        title.innerText = "未達本行授信門檻 (Rejected)";
+        title.className = "text-xl sm:text-2xl font-black text-white";
+        subtitle.innerText = "評等判定：高風險/重大信用瑕疵 (High Risk)";
+        subtitle.className = "text-xs text-rose-400 mt-1";
+        iconBox.className = "w-14 h-14 mx-auto rounded-2xl bg-rose-500/20 text-rose-400 flex items-center justify-center text-2xl shadow-lg mb-2";
+        iconBox.innerHTML = '<i data-lucide="x-octagon" class="w-8 h-8"></i>';
+
+        termsBox.classList.add('hidden');
+        warnBox.className = "mt-3 p-3 rounded-xl border border-rose-500/40 bg-rose-950/30 text-rose-300 text-xs leading-relaxed";
+        warnBox.innerHTML = `<strong>❌ 婉拒原因條列：</strong>${result.reason}`;
+        warnBox.classList.remove('hidden');
+      }
+
+      // Trigger Tree Glow in Mode 3
+      updateTreePathHighlight(result.activePath);
+      lucide.createIcons();
+    }
+
+    function loadClientPreset(type) {
+      if (type === 'premier_teacher') {
+        document.getElementById('input-income').value = 140;
+        document.getElementById('input-dti').value = 22;
+        document.getElementById('input-credit-score').value = 760;
+        document.getElementById('input-card-payoff').value = 100;
+        document.getElementById('input-inquiries').value = 0;
+        document.getElementById('input-tenure').value = 8.5;
+        document.getElementById('input-occupation').value = 'tier1';
+        document.getElementById('input-aum').value = 130;
+        document.getElementById('input-req-amount').value = 80;
+        document.getElementById('input-purpose').value = 'home';
+      } else if (type === 'rich_entrepreneur') {
+        document.getElementById('input-income').value = 260;
+        document.getElementById('input-dti').value = 35;
+        document.getElementById('input-credit-score').value = 720;
+        document.getElementById('input-card-payoff').value = 95;
+        document.getElementById('input-inquiries').value = 1;
+        document.getElementById('input-tenure').value = 12.0;
+        document.getElementById('input-occupation').value = 'tier3';
+        document.getElementById('input-aum').value = 350;
+        document.getElementById('input-req-amount').value = 200;
+        document.getElementById('input-purpose').value = 'business';
+      } else if (type === 'high_risk_overdrawn') {
+        document.getElementById('input-income').value = 58;
+        document.getElementById('input-dti').value = 68;
+        document.getElementById('input-credit-score').value = 580;
+        document.getElementById('input-card-payoff').value = 55;
+        document.getElementById('input-inquiries').value = 5;
+        document.getElementById('input-tenure').value = 1.0;
+        document.getElementById('input-occupation').value = 'tier4';
+        document.getElementById('input-aum').value = 5;
+        document.getElementById('input-req-amount').value = 50;
+        document.getElementById('input-purpose').value = 'debt';
+      }
+      runUnderwrite();
+    }
+
+    // -------------------------------------------------------------
+    // 4. MODE 2: SALES RADAR & TELEMARKETING SCRIPT
+    // -------------------------------------------------------------
+    let leadsFilter = 'all';
+
+    function renderLeadsTable() {
+      const tbody = document.getElementById('leads-table-body');
+      tbody.innerHTML = '';
+
+      let list = CUSTOMER_DATABASE;
+      if (leadsFilter === 'vip') {
+        list = CUSTOMER_DATABASE.filter(c => c.isVip);
+      }
+
+      list.forEach(c => {
+        const tr = document.createElement('tr');
+        tr.className = `hover:bg-slate-800/60 transition cursor-pointer ${currentSelectedLead.id === c.id ? 'bg-cyan-950/30' : ''}`;
+        tr.onclick = () => selectLead(c);
+
+        let statusBadge = '';
+        if (c.isVip) {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30">✨ 尊爵電銷VIP</span>';
+        } else if (c.dti > 50) {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30">風控阻斷</span>';
+        } else {
+          statusBadge = '<span class="px-2 py-0.5 rounded text-[10px] font-bold bg-slate-800 text-slate-400">一般服務</span>';
+        }
+
+        tr.innerHTML = `
+          <td class="p-2.5 font-bold text-white">${c.name} <span class="text-[10px] text-slate-400 block font-normal">${c.job}</span></td>
+          <td class="p-2.5 font-mono ${c.score >= 720 ? 'text-emerald-400 font-bold' : 'text-slate-300'}">${c.score}</td>
+          <td class="p-2.5 font-mono">${c.income}萬</td>
+          <td class="p-2.5 font-mono text-cyan-400">${c.aum}萬</td>
+          <td class="p-2.5 font-mono ${c.dti <= 30 ? 'text-emerald-400' : (c.dti > 50 ? 'text-rose-400' : 'text-slate-300')}">${c.dti}%</td>
+          <td class="p-2.5">${statusBadge}</td>
+          <td class="p-2.5 text-center">
+            <button onclick="event.stopPropagation(); loadAndSwitchLead(${c.id})" class="px-2 py-1 rounded bg-slate-800 hover:bg-cyan-600 hover:text-white text-slate-300 text-[10px] transition font-mono">
+              帶入試算
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('leads-summary-text').innerText = `顯示 ${list.length} 筆客戶資料`;
+      document.getElementById('lead-count-badge').innerText = `${CUSTOMER_DATABASE.filter(c => c.isVip).length} 位`;
+    }
+
+    function selectLead(customer) {
+      currentSelectedLead = customer;
+      renderLeadsTable();
+
+      document.getElementById('lead-card-name').innerText = `${customer.name} (${customer.job})`;
+      document.getElementById('lead-stat-score-dti').innerText = `${customer.score}分 | DTI ${customer.dti}%`;
+      document.getElementById('lead-stat-income-aum').innerText = `${customer.income}萬 | AUM ${customer.aum}萬`;
+
+      const badge = document.getElementById('lead-card-badge');
+      const prodTitle = document.getElementById('lead-product-title');
+      const prodDesc = document.getElementById('lead-product-desc');
+      const pitchText = document.getElementById('lead-pitch-text');
+
+      if (customer.isVip) {
+        badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30";
+        badge.innerText = "Top Priority Lead (黃金商機)";
+        prodTitle.innerText = "「尊爵首選優利信貸」專案（首期 0.01% / 最高 300 萬）";
+        prodDesc.innerText = "本行最尊榮白金利率，免擔保、免開辦手續費，隨時作為大額理財配置或短期置產頭期調度資金。";
+        pitchText.innerText = `「${customer.name}先生/女士您好，我是○○銀行貴賓理財襄理。感謝您長期將主力資產託管於本行，系統偵測到您在聯徵信用分數高達 ${customer.score} 分且負債極低！總行今天特別為您提撥了最高 ${Math.min(250, customer.income)} 萬元的專屬低利預審額度，年利率破盤只要 1.98% 起，資金可隨時動用、不借不計息，幫您建立一個最高規格的私人備用金金庫，請問今天方便為您啟動嗎？」`;
+      } else if (customer.dti > 50) {
+        badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-rose-500/20 text-rose-300 border border-rose-500/30";
+        badge.innerText = "Risk Alert (風控阻斷)";
+        prodTitle.innerText = "暫不主動推銷信貸（可轉介財務健檢服務）";
+        prodDesc.innerText = "該存戶目前負債比較高或信用分受壓，不宜再擴張無擔保消費金融槓桿，以免加重違約風險。";
+        pitchText.innerText = `「${customer.name}先生/女士您好，感謝您本行往來。我們注意到您近期有多筆資金周轉需求，本行目前推出專屬存戶債務優化諮詢，能協助您盤點信用卡與各項分期，減輕每月月付壓力，想為您預約理財顧問評估嗎？」`;
+      } else {
+        badge.className = "px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30";
+        badge.innerText = "Routine Prime (常規優質)";
+        prodTitle.innerText = "「上班族輕鬆成家信貸」（利率 2.25% 起 / 額度最高 150 萬）";
+        prodDesc.innerText = "靈活還款最長可分 84 期，適合修繕住宅、結婚或旅遊周轉。";
+        pitchText.innerText = `「${customer.name}您好，我是○○銀行信貸專員。感謝您長期使用本行帳戶，您目前符合本行優質存戶信貸專案，免保人、憑手機 3 分鐘即可核定備用金，近期如有修繕或週轉規劃可直接為您辦理。」`;
+      }
+    }
+
+    function filterLeads(type) {
+      leadsFilter = type;
+      const btnAll = document.getElementById('btn-lead-all');
+      const btnVip = document.getElementById('btn-lead-vip');
+
+      if (type === 'all') {
+        btnAll.className = "px-2 py-0.5 rounded bg-cyan-600 text-white font-bold";
+        btnVip.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+      } else {
+        btnVip.className = "px-2 py-0.5 rounded bg-cyan-600 text-white font-bold";
+        btnAll.className = "px-2 py-0.5 rounded text-slate-400 hover:text-white";
+      }
+      renderLeadsTable();
+    }
+
+    function loadAndSwitchLead(id) {
+      const c = CUSTOMER_DATABASE.find(item => item.id === id);
+      if (!c) return;
+      selectLead(c);
+      injectCurrentLeadToMode1();
+    }
+
+    function injectCurrentLeadToMode1() {
+      const c = currentSelectedLead;
+      document.getElementById('input-income').value = c.income;
+      document.getElementById('input-dti').value = c.dti;
+      document.getElementById('input-credit-score').value = c.score;
+      document.getElementById('input-card-payoff').value = c.payoff;
+      document.getElementById('input-inquiries').value = c.inq;
+      document.getElementById('input-tenure').value = c.tenure;
+      document.getElementById('input-occupation').value = c.occ;
+      document.getElementById('input-aum').value = c.aum;
+      document.getElementById('input-req-amount').value = c.req;
+      document.getElementById('input-purpose').value = c.purpose;
+
+      switchMode(1);
+      runUnderwrite();
+    }
+
+    function copySalesPitch() {
+      const text = document.getElementById('lead-pitch-text').innerText;
+      document.execCommand('copy');
+      const btn = event.currentTarget;
+      btn.innerHTML = '<i data-lucide="check" class="w-3 h-3 text-emerald-400"></i> 已複製說帖！';
+      setTimeout(() => {
+        btn.innerHTML = '<i data-lucide="copy" class="w-3 h-3"></i> 複製話術';
+        lucide.createIcons();
+      }, 1800);
+      lucide.createIcons();
+    }
+
+    // -------------------------------------------------------------
+    // 5. MODE 3: INTERACTIVE SVG DECISION TREE VISUALIZER
+    // -------------------------------------------------------------
+    const TREE_TOPOLOGY = {
+      nodes: {
+        'root': { x: 360, y: 40, label: "聯徵信用分 ≥ 650?", type: "decision", samples: 45, defRate: 15.5, ig: 0.512, desc: "根節點：信用分數是消金信貸區分好壞帳最致命的特徵。" },
+        'node-score-low': { x: 170, y: 140, label: "負債比 DTI > 60%?", type: "decision", samples: 10, defRate: 50.0, ig: 0.428, desc: "次級信用群中，若負債進一步超過 60%，極易引發骨牌式連鎖違約。" },
+        'node-score-high': { x: 550, y: 140, label: "負債比 DTI ≤ 45%?", type: "decision", samples: 35, defRate: 5.7, ig: 0.385, desc: "優質群體首重防範過度擴張槓桿。" },
+        'leaf-reject': { x: 80, y: 260, label: "🔴 婉拒 (Rejected)", type: "leaf-red", samples: 6, defRate: 83.3, desc: "雙重高風險疊加，系統自動阻斷以免產生呆帳。" },
+        'leaf-review': { x: 260, y: 260, label: "🟡 照會審查 (Review)", type: "leaf-yellow", samples: 8, defRate: 25.0, desc: "需徵提實質擔保人或房產殘值佐證。" },
+        'node-aum': { x: 460, y: 260, label: "AUM≥80萬 或 公教500強?", type: "decision", samples: 27, defRate: 3.7, ig: 0.290, desc: "評估其抵禦總體經濟景氣波動之財富安全氣囊。" },
+        'node-inquiry': { x: 640, y: 260, label: "聯徵被查 ≤ 1 次?", type: "decision", samples: 8, defRate: 12.5, ig: 0.315, desc: "高 DTI 情況下，短期頻繁被查代表正在多方急迫借貸。" },
+        'leaf-vip-pass': { x: 390, y: 380, label: "🟢 尊爵核貸 (Prime Pass)", type: "leaf-green", samples: 18, defRate: 0.0, desc: "零違約純淨葉節點！本行最高價值核心資產客戶。" },
+        'leaf-std-pass': { x: 520, y: 380, label: "🟢 標準核貸 (Standard)", type: "leaf-green", samples: 9, defRate: 4.2, desc: "常態正常授信客群，足額放行。" },
+        'leaf-conditional-pass': { x: 620, y: 380, label: "🟢 附條件核准 (Limit Cut)", type: "leaf-green", samples: 4, defRate: 7.5, desc: "調降額度 15% 以控管集中度曝險。" }
+      },
+      edges: [
+        { id: 'edge-root-left', from: 'root', to: 'node-score-low', label: '< 650 (次級)' },
+        { id: 'edge-root-right', from: 'root', to: 'node-score-high', label: '≥ 650 (優良)' },
+        { id: 'edge-n2-left', from: 'node-score-low', to: 'leaf-reject', label: '> 60% (危險)' },
+        { id: 'edge-n2-right', from: 'node-score-low', to: 'leaf-review', label: '≤ 60% (可查)' },
+        { id: 'edge-n3-left', from: 'node-score-high', to: 'node-aum', label: '≤ 45% (安全)' },
+        { id: 'edge-n3-right', from: 'node-score-high', to: 'node-inquiry', label: '> 45% (偏高)' },
+        { id: 'edge-n4-left', from: 'node-aum', to: 'leaf-vip-pass', label: 'Yes (資產優)' },
+        { id: 'edge-n4-right', from: 'node-aum', to: 'leaf-std-pass', label: 'No (普通)' },
+        { id: 'edge-n5-left', from: 'node-inquiry', to: 'leaf-conditional-pass', label: 'Yes (單純)' },
+        { id: 'edge-n5-right', from: 'node-inquiry', to: 'leaf-review', label: 'No (異常)' }
+      ]
+    };
+
+    let selectedTreeNodeId = 'root';
+
+    function renderTreeSVG() {
+      const svg = document.getElementById('credit-tree-svg');
+      svg.innerHTML = '';
+
+      // Draw Edges
+      TREE_TOPOLOGY.edges.forEach(edge => {
+        const from = TREE_TOPOLOGY.nodes[edge.from];
+        const to = TREE_TOPOLOGY.nodes[edge.to];
+
+        const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+        line.setAttribute("id", edge.id);
+        line.setAttribute("x1", from.x);
+        line.setAttribute("y1", from.y + 18);
+        line.setAttribute("x2", to.x);
+        line.setAttribute("y2", to.y - 18);
+        line.setAttribute("class", "tree-line");
+        svg.appendChild(line);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", (from.x + to.x) / 2 + (from.x > to.x ? -10 : 10));
+        text.setAttribute("y", (from.y + to.y) / 2 - 2);
+        text.setAttribute("fill", "#64748b");
+        text.setAttribute("font-size", "9.5");
+        text.setAttribute("font-family", "monospace");
+        text.setAttribute("font-weight", "bold");
+        text.setAttribute("text-anchor", "middle");
+        text.textContent = edge.label;
+        svg.appendChild(text);
+      });
+
+      // Draw Nodes
+      Object.keys(TREE_TOPOLOGY.nodes).forEach(nodeId => {
+        const node = TREE_TOPOLOGY.nodes[nodeId];
+        const isSelected = (nodeId === selectedTreeNodeId);
+
+        const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+        g.setAttribute("id", `svg-node-${nodeId}`);
+        g.setAttribute("class", `tree-box ${isSelected ? 'tree-box-active' : ''}`);
+        g.onclick = () => selectTreeNode(nodeId);
+
+        const width = 126;
+        const height = 36;
+        const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+        rect.setAttribute("x", node.x - width / 2);
+        rect.setAttribute("y", node.y - height / 2);
+        rect.setAttribute("width", width);
+        rect.setAttribute("height", height);
+        rect.setAttribute("rx", "9");
+
+        if (node.type === 'leaf-green') {
+          rect.setAttribute("fill", "#064e3b");
+          rect.setAttribute("stroke", "#10b981");
+        } else if (node.type === 'leaf-yellow') {
+          rect.setAttribute("fill", "#451a03");
+          rect.setAttribute("stroke", "#f59e0b");
+        } else if (node.type === 'leaf-red') {
+          rect.setAttribute("fill", "#4c0519");
+          rect.setAttribute("stroke", "#f43f5e");
+        } else {
+          rect.setAttribute("fill", "#0f172a");
+          rect.setAttribute("stroke", "#38bdf8");
+        }
+        rect.setAttribute("stroke-width", "1.5");
+        g.appendChild(rect);
+
+        const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+        text.setAttribute("x", node.x);
+        text.setAttribute("y", node.y + 4);
+        text.setAttribute("fill", "#ffffff");
+        text.setAttribute("font-size", "10");
+        text.setAttribute("font-weight", "bold");
+        text.setAttribute("text-anchor", "middle");
+        text.textContent = node.label;
+        g.appendChild(text);
+
+        svg.appendChild(g);
+      });
+    }
+
+    function selectTreeNode(nodeId) {
+      selectedTreeNodeId = nodeId;
+      renderTreeSVG();
+
+      const node = TREE_TOPOLOGY.nodes[nodeId];
+      if (!node) return;
+
+      document.getElementById('m3-inspect-id').innerText = nodeId.toUpperCase();
+      document.getElementById('m3-inspect-title').innerText = node.label;
+      document.getElementById('m3-inspect-condition').innerText = node.ig ? `資訊獲取量 IG = ${node.ig.toFixed(4)}` : `葉節點終端判定`;
+      document.getElementById('m3-inspect-samples').innerText = `${node.samples} 位`;
+      document.getElementById('m3-inspect-default').innerText = `${node.defRate.toFixed(1)} %`;
+      document.getElementById('m3-inspect-desc').innerText = node.desc;
+
+      // Mock composition bar
+      let pPass = 60, pReview = 20, pReject = 20;
+      if (node.type === 'leaf-green') { pPass = 100; pReview = 0; pReject = 0; }
+      else if (node.type === 'leaf-red') { pPass = 0; pReview = 0; pReject = 100; }
+      else if (node.type === 'leaf-yellow') { pPass = 0; pReview = 100; pReject = 0; }
+
+      document.getElementById('m3-bar-pass').style.width = `${pPass}%`;
+      document.getElementById('m3-bar-review').style.width = `${pReview}%`;
+      document.getElementById('m3-bar-reject').style.width = `${pReject}%`;
+
+      document.getElementById('m3-text-pass').innerText = `核准: ${pPass}%`;
+      document.getElementById('m3-text-review').innerText = `照會: ${pReview}%`;
+      document.getElementById('m3-text-reject').innerText = `婉拒: ${pReject}%`;
+    }
+
+    function updateTreePathHighlight(activeElements) {
+      // Clear all
+      document.querySelectorAll('.tree-line').forEach(l => l.classList.remove('tree-line-active'));
+      document.querySelectorAll('.tree-box').forEach(b => b.classList.remove('tree-box-active'));
+
+      activeElements.forEach(id => {
+        const line = document.getElementById(id);
+        if (line) line.classList.add('tree-line-active');
+
+        const box = document.getElementById(`svg-node-${id}`);
+        if (box) box.classList.add('tree-box-active');
+      });
+    }
+
+    // -------------------------------------------------------------
+    // 6. MODE 4: RISK & REVENUE DASHBOARD & CHART
+    // -------------------------------------------------------------
+    let policyChartInstance = null;
+
+    function initPolicyChart() {
+      const ctx = document.getElementById('policyChart');
+      if (!ctx) return;
+
+      policyChartInstance = new Chart(ctx, {
+        type: 'scatter',
+        data: {
+          datasets: [
+            {
+              label: '🟢 核准通過客群 (Approved)',
+              data: CUSTOMER_DATABASE.filter(c => c.score >= 650 && c.dti <= 50).map(c => ({ x: c.score, y: c.dti })),
+              backgroundColor: 'rgba(16, 185, 129, 0.75)',
+              borderColor: '#10b981',
+              pointRadius: 5
+            },
+            {
+              label: '🟡 人工照會客群 (Review)',
+              data: CUSTOMER_DATABASE.filter(c => (c.score < 650 && c.dti <= 55) || (c.score >= 650 && c.dti > 50 && c.dti <= 60)).map(c => ({ x: c.score, y: c.dti })),
+              backgroundColor: 'rgba(245, 158, 11, 0.75)',
+              borderColor: '#f59e0b',
+              pointRadius: 5
+            },
+            {
+              label: '🔴 婉拒阻斷客群 (Rejected)',
+              data: CUSTOMER_DATABASE.filter(c => c.score < 620 || c.dti > 60).map(c => ({ x: c.score, y: c.dti })),
+              backgroundColor: 'rgba(244, 63, 94, 0.75)',
+              borderColor: '#f43f5e',
+              pointRadius: 5
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            x: {
+              title: { display: true, text: '聯徵信用分數 (Credit Score)', color: '#94a3b8' },
+              grid: { color: '#1e293b' },
+              ticks: { color: '#94a3b8' },
+              min: 550, max: 800
+            },
+            y: {
+              title: { display: true, text: '負債比率 (DTI %)', color: '#94a3b8' },
+              grid: { color: '#1e293b' },
+              ticks: { color: '#94a3b8' },
+              min: 10, max: 80
+            }
+          },
+          plugins: {
+            legend: {
+              labels: { color: '#cbd5e1', font: { family: "'Noto Sans TC', sans-serif", size: 11 } }
+            }
+          }
+        }
+      });
+    }
+
+    function updatePolicyDashboard() {
+      const cutScore = parseInt(document.getElementById('policy-score-slider').value);
+      const capDti = parseInt(document.getElementById('policy-dti-slider').value);
+
+      document.getElementById('slider-val-score').innerText = `${cutScore} 分`;
+      document.getElementById('slider-val-dti').innerText = `${capDti} %`;
+
+      // Recalculate portfolio numbers with new policy thresholds
+      let passCount = 0;
+      let reviewCount = 0;
+      let rejectCount = 0;
+
+      CUSTOMER_DATABASE.forEach(c => {
+        if (c.score >= cutScore && c.dti <= capDti) {
+          passCount++;
+        } else if (c.dti > capDti + 10 || c.score < cutScore - 50) {
+          rejectCount++;
+        } else {
+          reviewCount++;
+        }
+      });
+
+      const total = CUSTOMER_DATABASE.length;
+      const approvalRate = ((passCount / total) * 100).toFixed(1);
+      // NPL simulated inversely to strictness
+      const nplRate = Math.max(0.65, (1.85 - (cutScore - 600) * 0.01 + (capDti - 45) * 0.02)).toFixed(2);
+      const loanPool = Math.round(passCount * 115);
+      const annualRev = (loanPool * 0.0238).toFixed(1);
+
+      document.getElementById('dash-approval-rate').innerText = `${approvalRate} %`;
+      document.getElementById('dash-npl-rate').innerText = `${nplRate} %`;
+      document.getElementById('dash-loan-pool').innerText = `${loanPool} 萬`;
+      document.getElementById('dash-annual-revenue').innerText = `${annualRev} 萬元`;
+
+      document.getElementById('stat-cases-pass').innerText = `${passCount} 件 (${approvalRate}%)`;
+      document.getElementById('stat-cases-review').innerText = `${reviewCount} 件 (${((reviewCount/total)*100).toFixed(1)}%)`;
+      document.getElementById('stat-cases-reject').innerText = `${rejectCount} 件 (${((rejectCount/total)*100).toFixed(1)}%)`;
+
+      // Update Narrative
+      const narrative = document.getElementById('policy-tradeoff-desc');
+      if (cutScore >= 680) {
+        narrative.innerText = `目前處於「緊縮防守型政策」：核貸門檻極高，NPL 降至低水位 ${nplRate}%，但約有 ${(100 - approvalRate)}% 客戶被排除，商機收益流失顯著。`;
+      } else if (capDti >= 60) {
+        narrative.innerText = `目前處於「積極擴張型政策」：核准率提升至 ${approvalRate}%，年度預估利息成長，但 NPL 攀升至 ${nplRate}%，需提防後續景氣反轉呆帳風險。`;
+      } else {
+        narrative.innerText = `目前處於「平衡穩健政策」：兼顧逾放控制 (${nplRate}%) 與放款獲利動能，維持最適資本適足率。`;
+      }
+
+      // Re-filter dataset for chart
+      if (policyChartInstance) {
+        policyChartInstance.data.datasets[0].data = CUSTOMER_DATABASE.filter(c => c.score >= cutScore && c.dti <= capDti).map(c => ({ x: c.score, y: c.dti }));
+        policyChartInstance.data.datasets[1].data = CUSTOMER_DATABASE.filter(c => !(c.score >= cutScore && c.dti <= capDti) && !(c.dti > capDti + 10 || c.score < cutScore - 50)).map(c => ({ x: c.score, y: c.dti }));
+        policyChartInstance.data.datasets[2].data = CUSTOMER_DATABASE.filter(c => c.dti > capDti + 10 || c.score < cutScore - 50).map(c => ({ x: c.score, y: c.dti }));
+        policyChartInstance.update();
+      }
+    }
+
+    // -------------------------------------------------------------
+    // 7. ROUTING & INITIALIZATION
+    // -------------------------------------------------------------
+    function switchMode(modeNum) {
+      [1, 2, 3, 4].forEach(n => {
+        const panel = document.getElementById(`mode-panel-${n}`);
+        const btn = document.getElementById(`tab-btn-${n}`);
+        if (n === modeNum) {
+          panel.classList.remove('hidden');
+          btn.className = 'tab-btn px-3 py-1.5 rounded-lg font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap bg-cyan-600 text-white shadow-md shadow-cyan-600/30';
+        } else {
+          panel.classList.add('hidden');
+          btn.className = 'tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60';
+        }
+      });
+
+      if (modeNum === 1) runUnderwrite();
+      if (modeNum === 2) renderLeadsTable();
+      if (modeNum === 3) { renderTreeSVG(); selectTreeNode(selectedTreeNodeId); }
+      if (modeNum === 4) {
+        if (!policyChartInstance) initPolicyChart();
+        updatePolicyDashboard();
+      }
+      lucide.createIcons();
+    }
+
+    window.onload = function() {
+      lucide.createIcons();
+      renderLeadsTable();
+      renderTreeSVG();
+      selectTreeNode('root');
+      runUnderwrite();
+    };
+  </script>
+</body>
+</html>

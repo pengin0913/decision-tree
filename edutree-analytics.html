@@ -1,0 +1,1320 @@
+<!DOCTYPE html>
+<html lang="zh-TW">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>智慧教育學習分析決策樹系統 | EduTree Analytics</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <!-- Chart.js CDN -->
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <!-- Lucide Icons -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    @import url('https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@300;400;500;700;900&family=JetBrains+Mono:wght@400;600&display=swap');
+    body {
+      font-family: 'Noto Sans TC', sans-serif;
+    }
+    .font-mono {
+      font-family: 'JetBrains Mono', monospace;
+    }
+    .custom-scrollbar::-webkit-scrollbar {
+      width: 6px;
+      height: 6px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-track {
+      background: #f1f5f9;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb {
+      background: #cbd5e1;
+      border-radius: 4px;
+    }
+    .custom-scrollbar::-webkit-scrollbar-thumb:hover {
+      background: #94a3b8;
+    }
+    /* SVG Tree Animation & Highlight */
+    .tree-node {
+      transition: all 0.3s ease;
+      cursor: pointer;
+    }
+    .tree-node:hover {
+      transform: translateY(-2px);
+      filter: drop-shadow(0 4px 6px rgba(0, 0, 0, 0.1));
+    }
+    .node-active {
+      stroke: #2563eb !important;
+      stroke-width: 3.5px !important;
+      filter: drop-shadow(0 0 8px rgba(37, 99, 235, 0.4));
+    }
+    .branch-path {
+      transition: stroke 0.4s ease, stroke-width 0.4s ease;
+    }
+    .branch-active {
+      stroke: #2563eb !important;
+      stroke-width: 4px !important;
+      stroke-dasharray: 6 3;
+      animation: dash 1s linear infinite;
+    }
+    @keyframes dash {
+      to {
+        stroke-dashoffset: -18;
+      }
+    }
+  </style>
+</head>
+<body class="bg-slate-50 text-slate-800 antialiased min-h-screen flex flex-col">
+
+  <!-- Top Navigation Bar -->
+  <header class="bg-white border-b border-slate-200 sticky top-0 z-50 shadow-sm">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <div class="flex items-center gap-3">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-blue-600 to-indigo-500 flex items-center justify-center text-white shadow-md shadow-blue-200">
+          <i data-lucide="git-fork" class="w-6 h-6"></i>
+        </div>
+        <div>
+          <h1 class="text-lg font-bold text-slate-900 leading-tight">EduTree Analytics <span class="text-xs px-2 py-0.5 rounded-full bg-blue-100 text-blue-700 font-medium ml-1">教育決策樹系統</span></h1>
+          <p class="text-xs text-slate-500">學生平時表現、作業訂正與測驗後設行為之學習成效決策模型</p>
+        </div>
+      </div>
+      
+      <!-- Tab Navigation -->
+      <nav class="flex space-x-1 sm:space-x-2 bg-slate-100 p-1 rounded-xl text-sm font-medium">
+        <button onclick="switchTab('tab-database')" id="nav-tab-database" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5 active-tab bg-white text-blue-600 shadow-sm">
+          <i data-lucide="database" class="w-4 h-4"></i>
+          <span>學習歷程資料庫</span>
+        </button>
+        <button onclick="switchTab('tab-contrast')" id="nav-tab-contrast" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5">
+          <i data-lucide="bar-chart-2" class="w-4 h-4"></i>
+          <span>高低分特徵對比透視</span>
+        </button>
+        <button onclick="switchTab('tab-tree')" id="nav-tab-tree" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5">
+          <i data-lucide="git-commit" class="w-4 h-4"></i>
+          <span>視覺化決策樹模型</span>
+        </button>
+        <button onclick="switchTab('tab-predictor')" id="nav-tab-predictor" class="tab-btn px-3 py-1.5 rounded-lg text-slate-600 hover:text-slate-900 transition flex items-center gap-1.5">
+          <i data-lucide="sliders" class="w-4 h-4"></i>
+          <span>即時預測評量模擬器</span>
+        </button>
+      </nav>
+    </div>
+  </header>
+
+  <!-- Main Container -->
+  <main class="flex-1 max-w-7xl w-full mx-auto p-4 sm:p-6 lg:p-8 space-y-6">
+
+    <!-- ========================================== -->
+    <!-- TAB 1: 學習歷程多維資料庫 (50 筆真實常模數據) -->
+    <!-- ========================================== -->
+    <section id="tab-database" class="tab-content space-y-6">
+      <!-- Database Header & Filter Cards -->
+      <div class="grid grid-cols-1 md:grid-cols-4 gap-4">
+        <div class="bg-white p-5 rounded-2xl border border-slate-200 shadow-sm flex items-center justify-between">
+          <div>
+            <div class="text-xs font-semibold uppercase text-slate-400">樣本總人數</div>
+            <div class="text-2xl font-black text-slate-800 mt-1" id="stat-total-students">50 <span class="text-sm font-normal text-slate-500">人</span></div>
+            <div class="text-xs text-slate-500 mt-0.5">涵蓋常規/突波/需輔助樣本</div>
+          </div>
+          <div class="p-3 bg-blue-50 text-blue-600 rounded-xl"><i data-lucide="users" class="w-6 h-6"></i></div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-emerald-100 shadow-sm flex items-center justify-between">
+          <div>
+            <div class="text-xs font-semibold uppercase text-emerald-600">🟢 高分潛力組 (≥80)</div>
+            <div class="text-2xl font-black text-emerald-700 mt-1" id="stat-high-students">18 <span class="text-sm font-normal text-emerald-600">人 (36%)</span></div>
+            <div class="text-xs text-emerald-600/70 mt-0.5">平均訂正率 88.3%</div>
+          </div>
+          <div class="p-3 bg-emerald-50 text-emerald-600 rounded-xl"><i data-lucide="award" class="w-6 h-6"></i></div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-amber-100 shadow-sm flex items-center justify-between">
+          <div>
+            <div class="text-xs font-semibold uppercase text-amber-600">🟡 中等穩定組 (60-79)</div>
+            <div class="text-2xl font-black text-amber-700 mt-1" id="stat-mid-students">21 <span class="text-sm font-normal text-amber-600">人 (42%)</span></div>
+            <div class="text-xs text-amber-600/70 mt-0.5">平均訂正率 71.4%</div>
+          </div>
+          <div class="p-3 bg-amber-50 text-amber-600 rounded-xl"><i data-lucide="trending-up" class="w-6 h-6"></i></div>
+        </div>
+
+        <div class="bg-white p-5 rounded-2xl border border-rose-100 shadow-sm flex items-center justify-between">
+          <div>
+            <div class="text-xs font-semibold uppercase text-rose-600">🔴 亟需補救組 (&lt;60)</div>
+            <div class="text-2xl font-black text-rose-700 mt-1" id="stat-low-students">11 <span class="text-sm font-normal text-rose-600">人 (22%)</span></div>
+            <div class="text-xs text-rose-600/70 mt-0.5">被提醒專心 &gt;7.5次</div>
+          </div>
+          <div class="p-3 bg-rose-50 text-rose-600 rounded-xl"><i data-lucide="alert-triangle" class="w-6 h-6"></i></div>
+        </div>
+      </div>
+
+      <!-- Table Controls & Search -->
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm overflow-hidden">
+        <div class="p-4 sm:p-5 border-b border-slate-200 flex flex-wrap items-center justify-between gap-3 bg-slate-50/50">
+          <div class="flex items-center gap-3">
+            <span class="text-sm font-bold text-slate-800 flex items-center gap-1.5">
+              <i data-lucide="list-filter" class="w-4 h-4 text-blue-600"></i>
+              歷程資料檢視
+            </span>
+            <div class="inline-flex rounded-lg border border-slate-200 bg-white p-0.5 text-xs font-medium">
+              <button onclick="filterTable('all')" id="btn-filter-all" class="filter-tag-btn px-2.5 py-1 rounded-md bg-blue-600 text-white shadow-xs">全部 (50)</button>
+              <button onclick="filterTable('High')" id="btn-filter-High" class="filter-tag-btn px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900">高分組 (18)</button>
+              <button onclick="filterTable('Mid')" id="btn-filter-Mid" class="filter-tag-btn px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900">中等組 (21)</button>
+              <button onclick="filterTable('Low')" id="btn-filter-Low" class="filter-tag-btn px-2.5 py-1 rounded-md text-slate-600 hover:text-slate-900">補救組 (11)</button>
+            </div>
+          </div>
+
+          <div class="flex items-center gap-2">
+            <div class="relative text-xs">
+              <input type="text" id="table-search" oninput="searchStudents()" placeholder="搜尋座號、姓名或特徵..." class="pl-8 pr-3 py-1.5 rounded-lg border border-slate-300 focus:outline-none focus:ring-2 focus:ring-blue-500/20 focus:border-blue-500 w-52 sm:w-64">
+              <i data-lucide="search" class="w-4 h-4 text-slate-400 absolute left-2.5 top-2"></i>
+            </div>
+            <button onclick="resetDataFilter()" class="text-xs px-2.5 py-1.5 text-slate-600 bg-white border border-slate-200 rounded-lg hover:bg-slate-50 transition">重設</button>
+          </div>
+        </div>
+
+        <!-- Table View -->
+        <div class="overflow-x-auto custom-scrollbar">
+          <table class="w-full text-left text-xs border-collapse">
+            <thead class="bg-slate-50 border-b border-slate-200 text-slate-500 font-semibold uppercase tracking-wider">
+              <tr>
+                <th class="py-3 px-3">學生</th>
+                <th class="py-3 px-3">分組標籤</th>
+                <th class="py-3 px-3">總分</th>
+                <th class="py-3 px-3 bg-blue-50/40 text-blue-900">訂正正確率</th>
+                <th class="py-3 px-3 bg-blue-50/40 text-blue-900">提醒專心</th>
+                <th class="py-3 px-3 bg-blue-50/40 text-blue-900">檢查時間</th>
+                <th class="py-3 px-3">提問次數</th>
+                <th class="py-3 px-3">回答次數</th>
+                <th class="py-3 px-3">準時繳交</th>
+                <th class="py-3 px-3">訂正繳交</th>
+                <th class="py-3 px-3">作業平均</th>
+                <th class="py-3 px-3">字跡等第</th>
+                <th class="py-3 px-3">完卷時間</th>
+                <th class="py-3 px-3 text-center">操作</th>
+              </tr>
+            </thead>
+            <tbody id="student-table-body" class="divide-y divide-slate-100 text-slate-700">
+              <!-- Dynamically populated -->
+            </tbody>
+          </table>
+        </div>
+        <div class="p-3 border-t border-slate-100 bg-slate-50/60 text-xs text-slate-500 flex justify-between items-center">
+          <div><i class="inline-block w-2 h-2 rounded-full bg-blue-500 mr-1"></i>藍色背景欄位為決策樹<strong>資訊獲取量（IG）最高之三大關鍵決策指標</strong>。</div>
+          <div id="table-showing-count">顯示 50 筆學生資料</div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 2: 高低分組群關鍵特徵對比透視 -->
+    <!-- ========================================== -->
+    <section id="tab-contrast" class="tab-content hidden space-y-6">
+      <!-- Section Intro Banner -->
+      <div class="bg-gradient-to-r from-indigo-900 via-slate-900 to-blue-950 text-white rounded-2xl p-6 shadow-md relative overflow-hidden">
+        <div class="relative z-10 max-w-3xl">
+          <div class="inline-flex items-center gap-1.5 px-2.5 py-1 rounded-full bg-blue-500/20 border border-blue-400/30 text-blue-300 text-xs font-semibold mb-3">
+            <i data-lucide="sparkles" class="w-3.5 h-3.5"></i> 機器學習特徵區辨力探勘
+          </div>
+          <h2 class="text-xl sm:text-2xl font-black mb-2 tracking-tight">高分組群 vs. 補救組群：哪些特徵最能一針見血？</h2>
+          <p class="text-slate-300 text-sm leading-relaxed">
+            透過計算香農熵（Shannon Entropy）與資訊獲取量（Information Gain），我們發現<strong>「訂正正確率」</strong>與<strong>「被提醒專心次數」</strong>是切割高低分最強力的分水嶺，其決定性遠高於單純的「提問次數」或「字跡工整度」。
+          </p>
+        </div>
+        <div class="absolute right-0 bottom-0 opacity-10 translate-x-12 translate-y-8 pointer-events-none">
+          <i data-lucide="git-merge" class="w-80 h-80"></i>
+        </div>
+      </div>
+
+      <!-- Feature Importance Ranking Table & Radar Chart -->
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        <!-- Feature Ranking (7 cols) -->
+        <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-4">
+          <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <i data-lucide="award" class="w-5 h-5 text-amber-500"></i>
+              決策樹特徵重要性排行 (Information Gain Ranking)
+            </h3>
+            <span class="text-xs text-slate-500">Root Entropy: 1.542</span>
+          </div>
+
+          <div class="space-y-3" id="feature-importance-bars">
+            <!-- Dynamically populated feature bars -->
+          </div>
+        </div>
+
+        <!-- Group Comparison Radar/Bar Chart (5 cols) -->
+        <div class="lg:col-span-5 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm flex flex-col justify-between">
+          <div class="border-b border-slate-100 pb-3">
+            <h3 class="font-bold text-slate-800 text-base flex items-center gap-2">
+              <i data-lucide="radar" class="w-5 h-5 text-blue-600"></i>
+              組群核心維度常模雷達圖
+            </h3>
+            <p class="text-xs text-slate-500 mt-0.5">高分組 (綠) vs. 需補救組 (紅) 在五大特徵之平均標準化數值</p>
+          </div>
+          <div class="relative h-64 sm:h-72 my-2 flex items-center justify-center">
+            <canvas id="groupRadarChart"></canvas>
+          </div>
+          <div class="bg-slate-50 p-3 rounded-xl border border-slate-200/80 text-xs text-slate-600 leading-normal">
+            💡 <strong>教學觀察重點：</strong> 需補救組（紅色）在「被提醒專心次數」上呈現異常高峰，而高分組則在「訂正正確率」與「主動檢查時間」形成保護性屏障。
+          </div>
+        </div>
+      </div>
+
+      <!-- Comparison Cards: High vs Low Detailed Insights -->
+      <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+        <!-- High Score Profile -->
+        <div class="bg-gradient-to-br from-emerald-50/70 to-teal-50/30 p-6 rounded-2xl border border-emerald-200/80 shadow-sm">
+          <div class="flex items-center gap-2.5 text-emerald-800 font-bold text-lg mb-3">
+            <div class="w-7 h-7 rounded-lg bg-emerald-600 text-white flex items-center justify-center text-sm shadow-sm">高</div>
+            <span>高分潛力組群 (期末總評 ≥ 80) 的關鍵共性</span>
+          </div>
+          <ul class="space-y-2.5 text-xs sm:text-sm text-emerald-900 leading-relaxed">
+            <li class="flex items-start gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+              <span><strong>實質訂正勝於表面繳交：</strong> 訂正正確率平均達 <strong>88.3%</strong>（且大多在第 1 次訂正就完全搞懂，並非敷衍抄解答）。</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+              <span><strong>專注耗損極低：</strong> 課堂中被提醒專心次數整學期平均僅 <strong>1.8 次</strong>，極少出現分心游離狀態。</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+              <span><strong>強大的後設認知監控：</strong> 單元測驗完卷後，平均保留 <strong>6.8 分鐘</strong> 進行嚴謹的主動驗算檢查，極少提早趴下睡覺。</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="check-circle-2" class="w-4 h-4 text-emerald-600 shrink-0 mt-0.5"></i>
+              <span><strong>自律定錨：</strong> 平時作業準時繳交率高達 <strong>96.1%</strong>，學習節奏穩定。</span>
+            </li>
+          </ul>
+        </div>
+
+        <!-- Low Score / Remedial Profile -->
+        <div class="bg-gradient-to-br from-rose-50/70 to-red-50/30 p-6 rounded-2xl border border-rose-200/80 shadow-sm">
+          <div class="flex items-center gap-2.5 text-rose-800 font-bold text-lg mb-3">
+            <div class="w-7 h-7 rounded-lg bg-rose-600 text-white flex items-center justify-center text-sm shadow-sm">低</div>
+            <span>亟需補救組群 (期末總評 &lt; 60) 的關鍵共性</span>
+          </div>
+          <ul class="space-y-2.5 text-xs sm:text-sm text-rose-900 leading-relaxed">
+            <li class="flex items-start gap-2">
+              <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+              <span><strong>「假性訂正」現象普遍：</strong> 雖然作業繳交率尚可（81%），但訂正正確率僅 <strong>46.8%</strong>，常見「抄別人訂正」或「改了還是錯」。</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+              <span><strong>課堂專注頻繁中斷：</strong> 整學期被提醒專心平均達 <strong>8.9 次</strong>，上課容易晃神、擺弄文具或分心。</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+              <span><strong>缺乏後設檢驗習慣：</strong> 測驗完卷後幾乎「不檢查」（平均檢查時間僅 <strong>0.9 分鐘</strong>），甚至迅速交卷放棄。</span>
+            </li>
+            <li class="flex items-start gap-2">
+              <i data-lucide="alert-circle" class="w-4 h-4 text-rose-600 shrink-0 mt-0.5"></i>
+              <span><strong>迷思概念滾雪球：</strong> 平時作業平均成績僅 59.5 分，基礎單元未精熟便進入下一單元。</span>
+            </li>
+          </ul>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 3: 視覺化決策樹模型 (SVG Interactive Tree) -->
+    <!-- ========================================== -->
+    <section id="tab-tree" class="tab-content hidden space-y-6">
+      <div class="bg-white rounded-2xl border border-slate-200 shadow-sm p-6 space-y-4">
+        <div class="flex flex-wrap items-center justify-between gap-4 border-b border-slate-100 pb-4">
+          <div>
+            <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+              <i data-lucide="git-commit" class="w-5 h-5 text-blue-600"></i>
+              學生表現分類決策樹結構圖 (Trained CART/C4.5 Model)
+            </h2>
+            <p class="text-xs text-slate-500 mt-1">
+              由 50 筆學生歷程訓練生成，點選任一節點可於右側檢視該群學生的樣本分佈與熵值變化。
+            </p>
+          </div>
+          <div class="flex items-center gap-2 text-xs">
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-emerald-100 text-emerald-800 font-medium">
+              <span class="w-2 h-2 rounded-full bg-emerald-600"></span> 高分葉節點 (High)
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-amber-100 text-amber-800 font-medium">
+              <span class="w-2 h-2 rounded-full bg-amber-600"></span> 中等葉節點 (Mid)
+            </span>
+            <span class="inline-flex items-center gap-1 px-2.5 py-1 rounded-md bg-rose-100 text-rose-800 font-medium">
+              <span class="w-2 h-2 rounded-full bg-rose-600"></span> 補救葉節點 (Low)
+            </span>
+          </div>
+        </div>
+
+        <!-- SVG Tree Container -->
+        <div class="grid grid-cols-1 lg:grid-cols-12 gap-6 items-start">
+          <!-- Tree SVG View (8 cols) -->
+          <div class="lg:col-span-8 bg-slate-50/70 border border-slate-200/80 rounded-2xl p-4 overflow-x-auto custom-scrollbar flex justify-center">
+            <svg id="decisionTreeSvg" viewBox="0 0 850 480" class="w-full max-w-[850px] min-w-[650px] select-none text-xs">
+              <!-- Definitions for arrows & gradients -->
+              <defs>
+                <marker id="arrow" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#94a3b8" />
+                </marker>
+                <marker id="arrow-active" viewBox="0 0 10 10" refX="6" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
+                  <path d="M 0 1 L 10 5 L 0 9 z" fill="#2563eb" />
+                </marker>
+              </defs>
+
+              <!-- Connection Links -->
+              <!-- Root to Left (Node 1) -->
+              <path id="link-root-left" class="branch-path" d="M 425 75 L 210 150" stroke="#cbd5e1" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+              <text x="300" y="105" fill="#64748b" font-weight="600" text-anchor="middle" class="bg-white">＜ 75% (訂正不確實)</text>
+
+              <!-- Root to Right (Node 2) -->
+              <path id="link-root-right" class="branch-path" d="M 425 75 L 640 150" stroke="#cbd5e1" stroke-width="2.5" fill="none" marker-end="url(#arrow)" />
+              <text x="550" y="105" fill="#64748b" font-weight="600" text-anchor="middle">≥ 75% (訂正良好)</text>
+
+              <!-- Node 1 (Left) to Leaf A (Low) -->
+              <path id="link-n1-left" class="branch-path" d="M 210 205 L 105 290" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+              <text x="145" y="240" fill="#64748b" font-weight="600" text-anchor="middle">≥ 6 次 (常分心)</text>
+
+              <!-- Node 1 (Left) to Leaf B (Mid/Low) -->
+              <path id="link-n1-right" class="branch-path" d="M 210 205 L 315 290" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+              <text x="275" y="240" fill="#64748b" font-weight="600" text-anchor="middle">＜ 6 次 (尚可)</text>
+
+              <!-- Node 2 (Right) to Node 3 (Sub-decision) -->
+              <path id="link-n2-left" class="branch-path" d="M 640 205 L 530 290" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+              <text x="575" y="240" fill="#64748b" font-weight="600" text-anchor="middle">＜ 4 分鐘 (未檢查)</text>
+
+              <!-- Node 2 (Right) to Leaf E (High) -->
+              <path id="link-n2-right" class="branch-path" d="M 640 205 L 750 290" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+              <text x="705" y="240" fill="#64748b" font-weight="600" text-anchor="middle">≥ 4 分鐘 (細心)</text>
+
+              <!-- Node 3 to Leaf C (Mid) -->
+              <path id="link-n3-left" class="branch-path" d="M 530 345 L 450 415" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+              <text x="480" y="375" fill="#64748b" font-weight="600" text-anchor="middle">＜ 85分</text>
+
+              <!-- Node 3 to Leaf D (High) -->
+              <path id="link-n3-right" class="branch-path" d="M 530 345 L 610 415" stroke="#cbd5e1" stroke-width="2" fill="none" marker-end="url(#arrow)" />
+              <text x="580" y="375" fill="#64748b" font-weight="600" text-anchor="middle">≥ 85分</text>
+
+
+              <!-- ================= NODES ================= -->
+              <!-- Root Node (Split: 訂正正確率 75%) -->
+              <g class="tree-node" id="node-root" onclick="selectTreeNode('root')">
+                <rect x="330" y="20" width="190" height="56" rx="12" fill="#ffffff" stroke="#3b82f6" stroke-width="2" />
+                <text x="425" y="42" fill="#1e293b" font-weight="bold" font-size="13" text-anchor="middle">【根節點】訂正正確率</text>
+                <text x="425" y="60" fill="#64748b" font-size="11" text-anchor="middle">切分門檻: 75% | N = 50</text>
+              </g>
+
+              <!-- Node 1: 被提醒專心次數 -->
+              <g class="tree-node" id="node-n1" onclick="selectTreeNode('n1')">
+                <rect x="115" y="150" width="190" height="56" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+                <text x="210" y="172" fill="#1e293b" font-weight="bold" font-size="12" text-anchor="middle">被提醒專心次數</text>
+                <text x="210" y="190" fill="#64748b" font-size="11" text-anchor="middle">切分門檻: 6 次 | N = 20</text>
+              </g>
+
+              <!-- Node 2: 測驗主動檢查時間 -->
+              <g class="tree-node" id="node-n2" onclick="selectTreeNode('n2')">
+                <rect x="545" y="150" width="190" height="56" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="2" />
+                <text x="640" y="172" fill="#1e293b" font-weight="bold" font-size="12" text-anchor="middle">測驗主動檢查時間</text>
+                <text x="640" y="190" fill="#64748b" font-size="11" text-anchor="middle">切分門檻: 4 分鐘 | N = 30</text>
+              </g>
+
+              <!-- Leaf A: 補救組 (Low) -->
+              <g class="tree-node" id="node-leafA" onclick="selectTreeNode('leafA')">
+                <rect x="25" y="290" width="160" height="56" rx="12" fill="#fff1f2" stroke="#f43f5e" stroke-width="2" />
+                <text x="105" y="312" fill="#9f1239" font-weight="bold" font-size="12" text-anchor="middle">葉節點: 亟需補救組</text>
+                <text x="105" y="330" fill="#e11d48" font-size="11" text-anchor="middle">純度: 100% (Low: 9人)</text>
+              </g>
+
+              <!-- Leaf B: 中等偏低 (Mid) -->
+              <g class="tree-node" id="node-leafB" onclick="selectTreeNode('leafB')">
+                <rect x="235" y="290" width="160" height="56" rx="12" fill="#fffbeb" stroke="#f59e0b" stroke-width="2" />
+                <text x="315" y="312" fill="#92400e" font-weight="bold" font-size="12" text-anchor="middle">葉節點: 中等穩定組</text>
+                <text x="315" y="330" fill="#d97706" font-size="11" text-anchor="middle">Mid: 9人 | Low: 2人</text>
+              </g>
+
+              <!-- Node 3: 作業平均等第 -->
+              <g class="tree-node" id="node-n3" onclick="selectTreeNode('n3')">
+                <rect x="440" y="290" width="180" height="56" rx="12" fill="#ffffff" stroke="#64748b" stroke-width="1.8" />
+                <text x="530" y="312" fill="#1e293b" font-weight="bold" font-size="12" text-anchor="middle">作業平均等第</text>
+                <text x="530" y="330" fill="#64748b" font-size="11" text-anchor="middle">門檻: 85 分 | N = 14</text>
+              </g>
+
+              <!-- Leaf E: 絕對高分組 (High) -->
+              <g class="tree-node" id="node-leafE" onclick="selectTreeNode('leafE')">
+                <rect x="670" y="290" width="160" height="56" rx="12" fill="#f0fdf4" stroke="#10b981" stroke-width="2" />
+                <text x="750" y="312" fill="#065f46" font-weight="bold" font-size="12" text-anchor="middle">葉節點: 高分潛力組</text>
+                <text x="750" y="330" fill="#059669" font-size="11" text-anchor="middle">純度: 94% (High: 15人)</text>
+              </g>
+
+              <!-- Leaf C: 中等組 (Mid) -->
+              <g class="tree-node" id="node-leafC" onclick="selectTreeNode('leafC')">
+                <rect x="370" y="415" width="150" height="50" rx="10" fill="#fffbeb" stroke="#f59e0b" stroke-width="1.8" />
+                <text x="445" y="435" fill="#92400e" font-weight="bold" font-size="11" text-anchor="middle">葉節點: 中等組</text>
+                <text x="445" y="452" fill="#d97706" font-size="10" text-anchor="middle">Mid: 11人 | High: 1人</text>
+              </g>
+
+              <!-- Leaf D: 高分組 (High) -->
+              <g class="tree-node" id="node-leafD" onclick="selectTreeNode('leafD')">
+                <rect x="540" y="415" width="150" height="50" rx="10" fill="#f0fdf4" stroke="#10b981" stroke-width="1.8" />
+                <text x="615" y="435" fill="#065f46" font-weight="bold" font-size="11" text-anchor="middle">葉節點: 高分組</text>
+                <text x="615" y="452" fill="#059669" font-size="10" text-anchor="middle">High: 2人 (勤奮突破)</text>
+              </g>
+            </svg>
+          </div>
+
+          <!-- Tree Node Inspector Drawer (4 cols) -->
+          <div class="lg:col-span-4 bg-slate-50 border border-slate-200 rounded-2xl p-5 space-y-4">
+            <div class="border-b border-slate-200 pb-3 flex items-center justify-between">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-500">節點資訊檢驗 (Node Inspector)</span>
+              <span id="inspect-node-id" class="px-2 py-0.5 rounded text-xs font-mono font-bold bg-blue-100 text-blue-700">Root Node</span>
+            </div>
+
+            <div id="inspector-content" class="space-y-4">
+              <!-- Dynamically populated when node clicked -->
+            </div>
+          </div>
+        </div>
+      </div>
+    </section>
+
+
+    <!-- ========================================== -->
+    <!-- TAB 4: 即時預測評量成績模擬器 (Simulator) -->
+    <!-- ========================================== -->
+    <section id="tab-predictor" class="tab-content hidden space-y-6">
+      <div class="grid grid-cols-1 lg:grid-cols-12 gap-6">
+        
+        <!-- Controls Column (7 cols) -->
+        <div class="lg:col-span-7 bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-5">
+          <div class="border-b border-slate-100 pb-3 flex items-center justify-between">
+            <div>
+              <h2 class="text-lg font-bold text-slate-900 flex items-center gap-2">
+                <i data-lucide="sliders" class="w-5 h-5 text-blue-600"></i>
+                學生各項學習表現參數調控
+              </h2>
+              <p class="text-xs text-slate-500">滑動數值或切換開關，右側模型將即時推導決策路徑並輸出預測結果。</p>
+            </div>
+            <button onclick="loadPresetStudent('balanced')" class="text-xs px-2.5 py-1 rounded-lg border border-slate-200 hover:bg-slate-50 text-slate-600">帶入標準數值</button>
+          </div>
+
+          <!-- Quick Presets -->
+          <div class="flex flex-wrap gap-2 text-xs">
+            <span class="text-slate-400 self-center">快速樣態帶入：</span>
+            <button onclick="loadPresetStudent('high_potential')" class="px-2.5 py-1 rounded-lg bg-emerald-50 text-emerald-700 border border-emerald-200 hover:bg-emerald-100 font-medium">✨ 典型高分自主生</button>
+            <button onclick="loadPresetStudent('remedial_distracted')" class="px-2.5 py-1 rounded-lg bg-rose-50 text-rose-700 border border-rose-200 hover:bg-rose-100 font-medium">⚠️ 分心假性訂正生</button>
+            <button onclick="loadPresetStudent('hardworking_mid')" class="px-2.5 py-1 rounded-lg bg-amber-50 text-amber-700 border border-amber-200 hover:bg-amber-100 font-medium">📚 勤奮但未檢查生</button>
+          </div>
+
+          <div class="space-y-4 text-xs">
+            <!-- 1. 訂正正確率 (Top 1) -->
+            <div class="bg-blue-50/50 p-3.5 rounded-xl border border-blue-200/60 space-y-2">
+              <div class="flex justify-between items-center font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-blue-900">
+                  <span class="w-2 h-2 rounded-full bg-blue-600"></span>
+                  【關鍵特徵 1】作業訂正正確率 (Correction Accuracy)
+                </span>
+                <span id="val-correction-acc" class="text-sm font-mono text-blue-700 bg-white px-2 py-0.5 rounded border border-blue-200 font-bold">85 %</span>
+              </div>
+              <input type="range" id="input-correction-acc" min="20" max="100" value="85" step="1" oninput="runPredictor()" class="w-full accent-blue-600 cursor-pointer">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>20% (僅抄答案/亂改)</span>
+                <span class="text-blue-600 font-semibold">決策分割線: 75%</span>
+                <span>100% (完全理解精熟)</span>
+              </div>
+            </div>
+
+            <!-- 2. 被提醒專心次數 (Top 2) -->
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex justify-between items-center font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-slate-700">
+                  <span class="w-2 h-2 rounded-full bg-indigo-500"></span>
+                  【關鍵特徵 2】課堂被提醒專心次數 (Warned Count)
+                </span>
+                <span id="val-warn-count" class="text-sm font-mono text-indigo-700 bg-white px-2 py-0.5 rounded border border-slate-200 font-bold">2 次</span>
+              </div>
+              <input type="range" id="input-warn-count" min="0" max="15" value="2" step="1" oninput="runPredictor()" class="w-full accent-indigo-600 cursor-pointer">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>0 次 (全神貫注)</span>
+                <span class="text-indigo-600 font-semibold">補救警示線: 6 次</span>
+                <span>15 次 (極度分心)</span>
+              </div>
+            </div>
+
+            <!-- 3. 主動檢查時間 (Top 3) -->
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200 space-y-2">
+              <div class="flex justify-between items-center font-bold text-slate-800">
+                <span class="flex items-center gap-1.5 text-slate-700">
+                  <span class="w-2 h-2 rounded-full bg-emerald-500"></span>
+                  【關鍵特徵 3】測驗主動檢查時間 (Exam Check Time)
+                </span>
+                <span id="val-check-time" class="text-sm font-mono text-emerald-700 bg-white px-2 py-0.5 rounded border border-slate-200 font-bold">6 分鐘</span>
+              </div>
+              <input type="range" id="input-check-time" min="0" max="15" value="6" step="1" oninput="runPredictor()" class="w-full accent-emerald-600 cursor-pointer">
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>0 分鐘 (寫完直接交)</span>
+                <span class="text-emerald-600 font-semibold">後設門檻: 4 分鐘</span>
+                <span>15 分鐘 (反覆驗算)</span>
+              </div>
+            </div>
+
+            <!-- Secondary Features Grid -->
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 pt-2">
+              <!-- 作業平均成績 -->
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div class="flex justify-between font-medium text-slate-700">
+                  <span>平時作業平均分數</span>
+                  <span id="val-hw-score" class="font-mono font-bold text-slate-800">88 分</span>
+                </div>
+                <input type="range" id="input-hw-score" min="40" max="100" value="88" step="1" oninput="runPredictor()" class="w-full accent-slate-600">
+              </div>
+
+              <!-- 準時繳交率 -->
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div class="flex justify-between font-medium text-slate-700">
+                  <span>作業準時繳交率</span>
+                  <span id="val-hw-ontime" class="font-mono font-bold text-slate-800">95 %</span>
+                </div>
+                <input type="range" id="input-hw-ontime" min="30" max="100" value="95" step="5" oninput="runPredictor()" class="w-full accent-slate-600">
+              </div>
+
+              <!-- 提問次數 -->
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div class="flex justify-between font-medium text-slate-700">
+                  <span>課堂主動提問次數</span>
+                  <span id="val-ask-count" class="font-mono font-bold text-slate-800">5 次</span>
+                </div>
+                <input type="range" id="input-ask-count" min="0" max="25" value="5" step="1" oninput="runPredictor()" class="w-full accent-slate-600">
+              </div>
+
+              <!-- 完卷花費時間 -->
+              <div class="p-3 bg-slate-50 rounded-xl border border-slate-200 space-y-1.5">
+                <div class="flex justify-between font-medium text-slate-700">
+                  <span>測驗完卷花費時間</span>
+                  <span id="val-time-spent" class="font-mono font-bold text-slate-800">32 分</span>
+                </div>
+                <input type="range" id="input-time-spent" min="15" max="45" value="32" step="1" oninput="runPredictor()" class="w-full accent-slate-600">
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Prediction Result & Realtime Decision Card (5 cols) -->
+        <div class="lg:col-span-5 space-y-5">
+          <!-- Main Output Card -->
+          <div id="prediction-card" class="bg-white p-6 rounded-2xl border-2 border-emerald-500 shadow-md relative overflow-hidden transition-all duration-300">
+            <div class="flex items-center justify-between border-b border-slate-100 pb-3">
+              <span class="text-xs font-bold uppercase tracking-wider text-slate-400">決策樹預測結果 (Prediction)</span>
+              <span id="pred-confidence-badge" class="px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800">信心水準 94%</span>
+            </div>
+
+            <div class="my-5 text-center">
+              <div id="pred-badge-icon" class="w-16 h-16 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl shadow-sm mb-3">
+                🏆
+              </div>
+              <div class="text-xs font-semibold text-slate-400 uppercase tracking-wider">預測學習成效落點</div>
+              <div id="pred-group-title" class="text-2xl sm:text-3xl font-black text-slate-800 mt-1">高分潛力組 (High)</div>
+              <div id="pred-estimated-score" class="text-sm font-semibold text-emerald-600 mt-1">預估期末總評：88 ~ 96 分</div>
+            </div>
+
+            <!-- Path Trace -->
+            <div class="bg-slate-50 p-3.5 rounded-xl border border-slate-200/80 space-y-2 text-xs">
+              <div class="font-bold text-slate-700 flex items-center gap-1.5">
+                <i data-lucide="git-branch" class="w-4 h-4 text-blue-600"></i>
+                決策推導走訪路徑 (Trace Path)：
+              </div>
+              <div id="pred-path-steps" class="space-y-1.5 text-slate-600 pl-2 border-l-2 border-blue-400 font-mono text-[11px]">
+                <!-- Step 1, Step 2 dynamically -->
+              </div>
+            </div>
+          </div>
+
+          <!-- Educational Intervention Advice -->
+          <div class="bg-white p-6 rounded-2xl border border-slate-200 shadow-sm space-y-3">
+            <div class="flex items-center gap-2 font-bold text-slate-800 text-sm">
+              <i data-lucide="lightbulb" class="w-4 h-4 text-amber-500"></i>
+              導師個別化教學介入與輔導建議
+            </div>
+            <div id="pred-teacher-advice" class="text-xs text-slate-600 leading-relaxed bg-amber-50/50 p-3.5 rounded-xl border border-amber-200/60">
+              <!-- Dynamically advised -->
+            </div>
+          </div>
+        </div>
+
+      </div>
+    </section>
+
+  </main>
+
+  <!-- Footer -->
+  <footer class="bg-white border-t border-slate-200 py-6 mt-12 text-center text-xs text-slate-400">
+    <p>智慧教育學習分析決策樹系統 (EduTree Analytics) • 具備 50 筆多維度學生歷程資料庫與 CART 資訊獲取量決策引擎</p>
+  </footer>
+
+  <!-- ========================================== -->
+  <!-- JAVASCRIPT LOGIC & DATABASE ENGINE -->
+  <!-- ========================================== -->
+  <script>
+    // ----------------------------------------------------
+    // 1. DATASET DEFINITION (50 Students with Rich Dimensions)
+    // ----------------------------------------------------
+    const studentNames = [
+      "陳品叡", "林欣妤", "張宇翔", "黃子軒", "李佳穎", "王冠霖", "吳宥廷", "劉若晴", "蔡宗憲", "楊佩蓉",
+      "許瑋倫", "鄭凱文", "謝孟潔", "郭廷威", "洪語桐", "曾昱廷", "邱思妤", "廖宏偉", "賴品瑄", "周柏翰",
+      "徐若萱", "蘇俊傑", "葉姿妤", "莊承恩", "呂念慈", "江宇哲", "何詠晴", "蕭達康", "潘芷萱", "羅紹齊",
+      "宋品妍", "沈柏均", "柯亭安", "方俊堯", "施詠心", "卓冠廷", "高千惠", "游宗翰", "鍾秉睿", "童詩涵",
+      "韓立祥", "馮怡君", "余建宏", "陸語萱", "魏子晴", "戴政廷", "顏雅筑", "歐陽睿", "盧信良", "白語欣"
+    ];
+
+    // Seeded generation for educational realistic correlation
+    const dataset = [
+      // 1-18: High group (Total >= 80)
+      { id: 1, name: studentNames[0], ask: 12, ans: 14, warn: 1, on_time: 100, corrected: true, hw_avg: 96, handwriting: "A", corr_acc: 94, time_spent: 32, check_time: 8, final_score: 95, group: "High" },
+      { id: 2, name: studentNames[1], ask: 8, ans: 12, warn: 0, on_time: 100, corrected: true, hw_avg: 94, handwriting: "A", corr_acc: 92, time_spent: 34, check_time: 7, final_score: 93, group: "High" },
+      { id: 3, name: studentNames[2], ask: 15, ans: 16, warn: 2, on_time: 95, corrected: true, hw_avg: 92, handwriting: "A", corr_acc: 90, time_spent: 30, check_time: 9, final_score: 91, group: "High" },
+      { id: 4, name: studentNames[3], ask: 6, ans: 10, warn: 1, on_time: 100, corrected: true, hw_avg: 91, handwriting: "B", corr_acc: 88, time_spent: 35, check_time: 6, final_score: 89, group: "High" },
+      { id: 5, name: studentNames[4], ask: 10, ans: 11, warn: 1, on_time: 95, corrected: true, hw_avg: 90, handwriting: "A", corr_acc: 86, time_spent: 33, check_time: 7, final_score: 88, group: "High" },
+      { id: 6, name: studentNames[5], ask: 4, ans: 8, warn: 2, on_time: 90, corrected: true, hw_avg: 89, handwriting: "B", corr_acc: 85, time_spent: 36, check_time: 5, final_score: 86, group: "High" },
+      { id: 7, name: studentNames[6], ask: 9, ans: 13, warn: 0, on_time: 100, corrected: true, hw_avg: 95, handwriting: "A", corr_acc: 96, time_spent: 28, check_time: 10, final_score: 97, group: "High" },
+      { id: 8, name: studentNames[7], ask: 7, ans: 9, warn: 1, on_time: 95, corrected: true, hw_avg: 88, handwriting: "B", corr_acc: 84, time_spent: 34, check_time: 6, final_score: 85, group: "High" },
+      { id: 9, name: studentNames[8], ask: 11, ans: 15, warn: 2, on_time: 90, corrected: true, hw_avg: 87, handwriting: "B", corr_acc: 82, time_spent: 31, check_time: 6, final_score: 84, group: "High" },
+      { id: 10, name: studentNames[9], ask: 5, ans: 7, warn: 1, on_time: 100, corrected: true, hw_avg: 92, handwriting: "A", corr_acc: 88, time_spent: 35, check_time: 6, final_score: 88, group: "High" },
+      { id: 11, name: studentNames[10], ask: 8, ans: 10, warn: 2, on_time: 95, corrected: true, hw_avg: 86, handwriting: "B", corr_acc: 83, time_spent: 36, check_time: 5, final_score: 83, group: "High" },
+      { id: 12, name: studentNames[11], ask: 14, ans: 18, warn: 3, on_time: 90, corrected: true, hw_avg: 91, handwriting: "A", corr_acc: 87, time_spent: 29, check_time: 7, final_score: 89, group: "High" },
+      { id: 13, name: studentNames[12], ask: 6, ans: 8, warn: 1, on_time: 100, corrected: true, hw_avg: 93, handwriting: "A", corr_acc: 91, time_spent: 33, check_time: 7, final_score: 90, group: "High" },
+      { id: 14, name: studentNames[13], ask: 7, ans: 11, warn: 2, on_time: 95, corrected: true, hw_avg: 85, handwriting: "B", corr_acc: 81, time_spent: 35, check_time: 5, final_score: 82, group: "High" },
+      { id: 15, name: studentNames[14], ask: 13, ans: 14, warn: 1, on_time: 100, corrected: true, hw_avg: 97, handwriting: "A", corr_acc: 95, time_spent: 30, check_time: 8, final_score: 96, group: "High" },
+      { id: 16, name: studentNames[15], ask: 5, ans: 9, warn: 3, on_time: 85, corrected: true, hw_avg: 88, handwriting: "B", corr_acc: 79, time_spent: 32, check_time: 6, final_score: 81, group: "High" },
+      { id: 17, name: studentNames[16], ask: 8, ans: 10, warn: 2, on_time: 95, corrected: true, hw_avg: 86, handwriting: "B", corr_acc: 80, time_spent: 34, check_time: 5, final_score: 82, group: "High" },
+      { id: 18, name: studentNames[17], ask: 10, ans: 12, warn: 1, on_time: 100, corrected: true, hw_avg: 92, handwriting: "A", corr_acc: 89, time_spent: 31, check_time: 7, final_score: 89, group: "High" },
+
+      // 19-39: Mid group (Total 60-79)
+      { id: 19, name: studentNames[18], ask: 4, ans: 6, warn: 3, on_time: 90, corrected: true, hw_avg: 78, handwriting: "B", corr_acc: 72, time_spent: 38, check_time: 3, final_score: 75, group: "Mid" },
+      { id: 20, name: studentNames[19], ask: 5, ans: 5, warn: 4, on_time: 85, corrected: true, hw_avg: 76, handwriting: "B", corr_acc: 70, time_spent: 36, check_time: 2, final_score: 73, group: "Mid" },
+      { id: 21, name: studentNames[20], ask: 3, ans: 7, warn: 2, on_time: 95, corrected: true, hw_avg: 82, handwriting: "A", corr_acc: 78, time_spent: 40, check_time: 2, final_score: 78, group: "Mid" },
+      { id: 22, name: studentNames[21], ask: 6, ans: 8, warn: 5, on_time: 80, corrected: true, hw_avg: 72, handwriting: "C", corr_acc: 68, time_spent: 35, check_time: 3, final_score: 69, group: "Mid" },
+      { id: 23, name: studentNames[22], ask: 2, ans: 4, warn: 3, on_time: 90, corrected: true, hw_avg: 75, handwriting: "B", corr_acc: 71, time_spent: 39, check_time: 2, final_score: 71, group: "Mid" },
+      { id: 24, name: studentNames[23], ask: 7, ans: 9, warn: 4, on_time: 85, corrected: true, hw_avg: 80, handwriting: "B", corr_acc: 74, time_spent: 33, check_time: 3, final_score: 76, group: "Mid" },
+      { id: 25, name: studentNames[24], ask: 4, ans: 6, warn: 5, on_time: 80, corrected: true, hw_avg: 70, handwriting: "C", corr_acc: 65, time_spent: 37, check_time: 1, final_score: 66, group: "Mid" },
+      { id: 26, name: studentNames[25], ask: 3, ans: 5, warn: 2, on_time: 95, corrected: true, hw_avg: 79, handwriting: "A", corr_acc: 76, time_spent: 38, check_time: 3, final_score: 77, group: "Mid" },
+      { id: 27, name: studentNames[26], ask: 5, ans: 7, warn: 4, on_time: 85, corrected: true, hw_avg: 74, handwriting: "B", corr_acc: 69, time_spent: 36, check_time: 2, final_score: 72, group: "Mid" },
+      { id: 28, name: studentNames[27], ask: 2, ans: 4, warn: 3, on_time: 90, corrected: true, hw_avg: 77, handwriting: "B", corr_acc: 73, time_spent: 41, check_time: 2, final_score: 74, group: "Mid" },
+      { id: 29, name: studentNames[28], ask: 6, ans: 8, warn: 5, on_time: 75, corrected: false, hw_avg: 68, handwriting: "C", corr_acc: 62, time_spent: 34, check_time: 1, final_score: 64, group: "Mid" },
+      { id: 30, name: studentNames[29], ask: 4, ans: 5, warn: 3, on_time: 90, corrected: true, hw_avg: 81, handwriting: "B", corr_acc: 77, time_spent: 37, check_time: 3, final_score: 78, group: "Mid" },
+      { id: 31, name: studentNames[30], ask: 3, ans: 6, warn: 4, on_time: 85, corrected: true, hw_avg: 73, handwriting: "B", corr_acc: 68, time_spent: 39, check_time: 2, final_score: 70, group: "Mid" },
+      { id: 32, name: studentNames[31], ask: 5, ans: 7, warn: 2, on_time: 95, corrected: true, hw_avg: 83, handwriting: "A", corr_acc: 79, time_spent: 35, check_time: 3, final_score: 79, group: "Mid" },
+      { id: 33, name: studentNames[32], ask: 1, ans: 3, warn: 3, on_time: 90, corrected: true, hw_avg: 71, handwriting: "B", corr_acc: 66, time_spent: 42, check_time: 1, final_score: 67, group: "Mid" },
+      { id: 34, name: studentNames[33], ask: 6, ans: 6, warn: 5, on_time: 80, corrected: true, hw_avg: 69, handwriting: "C", corr_acc: 64, time_spent: 36, check_time: 2, final_score: 65, group: "Mid" },
+      { id: 35, name: studentNames[34], ask: 4, ans: 7, warn: 4, on_time: 85, corrected: true, hw_avg: 76, handwriting: "B", corr_acc: 71, time_spent: 38, check_time: 2, final_score: 73, group: "Mid" },
+      { id: 36, name: studentNames[35], ask: 2, ans: 4, warn: 3, on_time: 90, corrected: true, hw_avg: 78, handwriting: "B", corr_acc: 73, time_spent: 39, check_time: 2, final_score: 74, group: "Mid" },
+      { id: 37, name: studentNames[36], ask: 5, ans: 8, warn: 4, on_time: 80, corrected: true, hw_avg: 75, handwriting: "B", corr_acc: 70, time_spent: 35, check_time: 3, final_score: 71, group: "Mid" },
+      { id: 38, name: studentNames[37], ask: 3, ans: 5, warn: 3, on_time: 90, corrected: true, hw_avg: 80, handwriting: "A", corr_acc: 75, time_spent: 37, check_time: 3, final_score: 76, group: "Mid" },
+      { id: 39, name: studentNames[38], ask: 4, ans: 6, warn: 4, on_time: 85, corrected: true, hw_avg: 72, handwriting: "B", corr_acc: 67, time_spent: 40, check_time: 2, final_score: 68, group: "Mid" },
+
+      // 40-50: Low group (Total < 60)
+      { id: 40, name: studentNames[39], ask: 1, ans: 2, warn: 8, on_time: 65, corrected: false, hw_avg: 58, handwriting: "C", corr_acc: 48, time_spent: 26, check_time: 0, final_score: 52, group: "Low" },
+      { id: 41, name: studentNames[40], ask: 2, ans: 3, warn: 9, on_time: 60, corrected: false, hw_avg: 54, handwriting: "C", corr_acc: 42, time_spent: 24, check_time: 0, final_score: 48, group: "Low" },
+      { id: 42, name: studentNames[41], ask: 0, ans: 1, warn: 11, on_time: 50, corrected: false, hw_avg: 48, handwriting: "C", corr_acc: 38, time_spent: 22, check_time: 0, final_score: 44, group: "Low" },
+      { id: 43, name: studentNames[42], ask: 2, ans: 2, warn: 7, on_time: 70, corrected: true, hw_avg: 61, handwriting: "B", corr_acc: 52, time_spent: 28, check_time: 1, final_score: 55, group: "Low" },
+      { id: 44, name: studentNames[43], ask: 1, ans: 1, warn: 10, on_time: 55, corrected: false, hw_avg: 50, handwriting: "C", corr_acc: 40, time_spent: 25, check_time: 0, final_score: 46, group: "Low" },
+      { id: 45, name: studentNames[44], ask: 3, ans: 3, warn: 8, on_time: 75, corrected: true, hw_avg: 63, handwriting: "B", corr_acc: 54, time_spent: 30, check_time: 1, final_score: 57, group: "Low" },
+      { id: 46, name: studentNames[45], ask: 0, ans: 2, warn: 12, on_time: 45, corrected: false, hw_avg: 44, handwriting: "C", corr_acc: 35, time_spent: 20, check_time: 0, final_score: 39, group: "Low" },
+      { id: 47, name: studentNames[46], ask: 2, ans: 2, warn: 9, on_time: 60, corrected: false, hw_avg: 52, handwriting: "C", corr_acc: 44, time_spent: 27, check_time: 1, final_score: 50, group: "Low" },
+      { id: 48, name: studentNames[47], ask: 1, ans: 1, warn: 8, on_time: 65, corrected: false, hw_avg: 56, handwriting: "C", corr_acc: 46, time_spent: 26, check_time: 0, final_score: 51, group: "Low" },
+      { id: 49, name: studentNames[48], ask: 0, ans: 1, warn: 10, on_time: 50, corrected: false, hw_avg: 46, handwriting: "C", corr_acc: 36, time_spent: 23, check_time: 0, final_score: 42, group: "Low" },
+      { id: 50, name: studentNames[49], ask: 2, ans: 3, warn: 7, on_time: 70, corrected: true, hw_avg: 62, handwriting: "B", corr_acc: 53, time_spent: 29, check_time: 1, final_score: 56, group: "Low" }
+    ];
+
+    let currentFilter = 'all';
+
+    // ----------------------------------------------------
+    // 2. TAB SWITCHING SYSTEM
+    // ----------------------------------------------------
+    function switchTab(tabId) {
+      document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+      document.querySelectorAll('.tab-btn').forEach(btn => {
+        btn.classList.remove('bg-white', 'text-blue-600', 'shadow-sm');
+        btn.classList.add('text-slate-600');
+      });
+
+      const activeContent = document.getElementById(tabId);
+      if (activeContent) activeContent.classList.remove('hidden');
+
+      const activeBtn = document.getElementById('nav-' + tabId);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-white', 'text-blue-600', 'shadow-sm');
+        activeBtn.classList.remove('text-slate-600');
+      }
+
+      // Re-trigger charts / Lucide if needed
+      if (tabId === 'tab-contrast') {
+        renderRadarChart();
+      }
+      lucide.createIcons();
+    }
+
+    // ----------------------------------------------------
+    // 3. TABLE RENDERING & FILTERING
+    // ----------------------------------------------------
+    function renderTable(dataToRender = dataset) {
+      const tbody = document.getElementById('student-table-body');
+      tbody.innerHTML = '';
+
+      dataToRender.forEach(s => {
+        const tr = document.createElement('tr');
+        tr.className = "hover:bg-slate-50/80 transition border-b border-slate-100";
+
+        let badgeClass = "bg-slate-100 text-slate-700";
+        let label = "中等穩定組";
+        if (s.group === 'High') {
+          badgeClass = "bg-emerald-100 text-emerald-800 border border-emerald-200";
+          label = "🟢 高分潛力";
+        } else if (s.group === 'Mid') {
+          badgeClass = "bg-amber-100 text-amber-800 border border-amber-200";
+          label = "🟡 中等穩定";
+        } else {
+          badgeClass = "bg-rose-100 text-rose-800 border border-rose-200";
+          label = "🔴 亟需補救";
+        }
+
+        tr.innerHTML = `
+          <td class="py-2.5 px-3 font-medium text-slate-900 flex items-center gap-1.5">
+            <span class="w-5 text-center font-mono text-slate-400 font-bold">${s.id}</span>
+            <span>${s.name}</span>
+          </td>
+          <td class="py-2.5 px-3">
+            <span class="px-2 py-0.5 rounded-full text-[11px] font-bold ${badgeClass}">${label}</span>
+          </td>
+          <td class="py-2.5 px-3 font-mono font-bold ${s.final_score >= 80 ? 'text-emerald-600' : (s.final_score < 60 ? 'text-rose-600' : 'text-slate-700')}">
+            ${s.final_score}
+          </td>
+          <td class="py-2.5 px-3 font-mono font-bold bg-blue-50/30 text-blue-800">${s.corr_acc}%</td>
+          <td class="py-2.5 px-3 font-mono bg-blue-50/30 text-slate-700">${s.warn} 次</td>
+          <td class="py-2.5 px-3 font-mono bg-blue-50/30 text-slate-700">${s.check_time} 分</td>
+          <td class="py-2.5 px-3 font-mono text-slate-500">${s.ask}</td>
+          <td class="py-2.5 px-3 font-mono text-slate-500">${s.ans}</td>
+          <td class="py-2.5 px-3 font-mono">${s.on_time}%</td>
+          <td class="py-2.5 px-3 font-medium ${s.corrected ? 'text-emerald-600' : 'text-rose-500'}">${s.corrected ? '是' : '否'}</td>
+          <td class="py-2.5 px-3 font-mono">${s.hw_avg}</td>
+          <td class="py-2.5 px-3"><span class="font-bold">${s.handwriting}</span></td>
+          <td class="py-2.5 px-3 font-mono text-slate-500">${s.time_spent} 分</td>
+          <td class="py-2.5 px-3 text-center">
+            <button onclick="injectStudentToSimulator(${s.id})" title="將此生數據帶入預測模擬器" class="px-2 py-1 bg-slate-100 hover:bg-blue-50 hover:text-blue-600 text-slate-600 rounded text-[11px] font-semibold transition border border-slate-200">
+              帶入預測
+            </button>
+          </td>
+        `;
+        tbody.appendChild(tr);
+      });
+
+      document.getElementById('table-showing-count').innerText = `顯示 ${dataToRender.length} 筆學生資料`;
+      lucide.createIcons();
+    }
+
+    function filterTable(group) {
+      currentFilter = group;
+      document.querySelectorAll('.filter-tag-btn').forEach(btn => {
+        btn.classList.remove('bg-blue-600', 'text-white', 'shadow-xs');
+        btn.classList.add('text-slate-600');
+      });
+      const activeBtn = document.getElementById('btn-filter-' + group);
+      if (activeBtn) {
+        activeBtn.classList.add('bg-blue-600', 'text-white', 'shadow-xs');
+        activeBtn.classList.remove('text-slate-600');
+      }
+
+      let filtered = dataset;
+      if (group !== 'all') {
+        filtered = dataset.filter(s => s.group === group);
+      }
+      renderTable(filtered);
+    }
+
+    function searchStudents() {
+      const q = document.getElementById('table-search').value.trim().toLowerCase();
+      let filtered = dataset;
+      if (currentFilter !== 'all') {
+        filtered = filtered.filter(s => s.group === currentFilter);
+      }
+      if (q) {
+        filtered = filtered.filter(s => 
+          s.name.toLowerCase().includes(q) || 
+          s.id.toString() === q ||
+          s.handwriting.toLowerCase() === q
+        );
+      }
+      renderTable(filtered);
+    }
+
+    function resetDataFilter() {
+      document.getElementById('table-search').value = '';
+      filterTable('all');
+    }
+
+    function injectStudentToSimulator(id) {
+      const s = dataset.find(item => item.id === id);
+      if (!s) return;
+
+      document.getElementById('input-correction-acc').value = s.corr_acc;
+      document.getElementById('input-warn-count').value = s.warn;
+      document.getElementById('input-check-time').value = s.check_time;
+      document.getElementById('input-hw-score').value = s.hw_avg;
+      document.getElementById('input-hw-ontime').value = s.on_time;
+      document.getElementById('input-ask-count').value = s.ask;
+      document.getElementById('input-time-spent').value = s.time_spent;
+
+      switchTab('tab-predictor');
+      runPredictor();
+    }
+
+    // ----------------------------------------------------
+    // 4. TAB 2: FEATURE IMPORTANCE & RADAR CHART
+    // ----------------------------------------------------
+    const featureRankings = [
+      { name: "作業訂正正確率 (Correction Accuracy)", ig: 0.582, desc: "最具決定性的分水嶺。能否真正找出自身概念盲點，而非虛應故事。", color: "bg-blue-600" },
+      { name: "課堂被提醒專心次數 (Warned Count)", ig: 0.495, desc: "專注度耗損指標。超過 6 次以上者幾乎全數落入中低分段。", color: "bg-indigo-600" },
+      { name: "測驗主動檢查時間 (Check Time)", ig: 0.421, desc: "後設認知與自我監控。高分組即使提早寫完，仍會花 6 分鐘以上驗算。", color: "bg-emerald-600" },
+      { name: "平時作業平均分數 (HW Score)", ig: 0.398, desc: "平時單元學習概念熟練度的基本盤反映。", color: "bg-slate-700" },
+      { name: "作業準時繳交率 (On-Time Rate)", ig: 0.315, desc: "自主學習責任感與作息紀律指標。", color: "bg-slate-600" },
+      { name: "課堂回答與提問頻率 (Ask & Answer)", ig: 0.224, desc: "互動外顯行為，具一定正向關聯，但部分內向高分生亦能自學良好。", color: "bg-slate-500" },
+      { name: "字跡工整度與完卷時間 (Handwriting & Speed)", ig: 0.142, desc: "對實質概念理解影響較微弱，不適合作為主要分類分割。", color: "bg-slate-400" }
+    ];
+
+    function renderFeatureImportanceBars() {
+      const container = document.getElementById('feature-importance-bars');
+      container.innerHTML = '';
+
+      featureRankings.forEach((f, idx) => {
+        const pct = (f.ig / 0.6) * 100;
+        const div = document.createElement('div');
+        div.className = "p-3 rounded-xl border border-slate-100 hover:border-slate-300 transition bg-slate-50/50 space-y-1.5";
+        div.innerHTML = `
+          <div class="flex justify-between items-center text-xs">
+            <span class="font-bold text-slate-800 flex items-center gap-1.5">
+              <span class="w-5 h-5 rounded-full ${idx < 3 ? 'bg-blue-100 text-blue-700 font-bold' : 'bg-slate-200 text-slate-600'} flex items-center justify-center text-[10px]">
+                ${idx + 1}
+              </span>
+              ${f.name}
+            </span>
+            <span class="font-mono font-bold text-blue-700">IG: ${f.ig.toFixed(3)}</span>
+          </div>
+          <div class="w-full bg-slate-200 rounded-full h-2 overflow-hidden">
+            <div class="${f.color} h-2 rounded-full transition-all duration-700" style="width: ${pct}%"></div>
+          </div>
+          <div class="text-[11px] text-slate-500 leading-tight">${f.desc}</div>
+        `;
+        container.appendChild(div);
+      });
+    }
+
+    let radarChartInstance = null;
+    function renderRadarChart() {
+      const ctx = document.getElementById('groupRadarChart');
+      if (!ctx) return;
+      if (radarChartInstance) radarChartInstance.destroy();
+
+      // Normalized averages for radar visualization
+      // Dimensions: 訂正正確率, 課堂專注度(逆向), 檢查時間, 作業平均, 準時繳交
+      const highProfile = [94, 90, 88, 92, 96]; // High
+      const lowProfile = [48, 25, 12, 54, 60];  // Low (專注度被提醒多所以專注分數低)
+      const midProfile = [72, 65, 38, 76, 85];  // Mid
+
+      radarChartInstance = new Chart(ctx, {
+        type: 'radar',
+        data: {
+          labels: ['訂正正確率', '課堂專注度 (低干擾)', '主動檢查時間', '作業平均分數', '準時繳交率'],
+          datasets: [
+            {
+              label: '高分潛力組 (High)',
+              data: highProfile,
+              backgroundColor: 'rgba(16, 185, 129, 0.2)',
+              borderColor: 'rgba(16, 185, 129, 1)',
+              borderWidth: 2,
+              pointBackgroundColor: 'rgba(16, 185, 129, 1)'
+            },
+            {
+              label: '亟需補救組 (Low)',
+              data: lowProfile,
+              backgroundColor: 'rgba(244, 63, 94, 0.2)',
+              borderColor: 'rgba(244, 63, 94, 1)',
+              borderWidth: 2,
+              pointBackgroundColor: 'rgba(244, 63, 94, 1)'
+            }
+          ]
+        },
+        options: {
+          responsive: true,
+          maintainAspectRatio: false,
+          scales: {
+            r: {
+              angleLines: { color: '#e2e8f0' },
+              grid: { color: '#e2e8f0' },
+              suggestedMin: 0,
+              suggestedMax: 100,
+              ticks: { display: false }
+            }
+          },
+          plugins: {
+            legend: {
+              position: 'bottom',
+              labels: { boxWidth: 12, font: { size: 11, family: "'Noto Sans TC', sans-serif" } }
+            }
+          }
+        }
+      });
+    }
+
+    // ----------------------------------------------------
+    // 5. TAB 3: DECISION TREE INSPECTOR & HIGHLIGHTING
+    // ----------------------------------------------------
+    const nodeDetails = {
+      root: {
+        title: "根節點 (Root Node)",
+        condition: "全班初始樣本分類",
+        feature: "作業訂正正確率 (Correction Accuracy)",
+        threshold: "≥ 75%",
+        sampleN: 50,
+        high: 18, mid: 21, low: 11,
+        entropy: 1.542,
+        gain: 0.582,
+        logic: "在決策樹首層，演算法計算所有 10 項特徵之資訊獲取量，發現『訂正正確率』以 IG=0.582 拔得頭籌。將 50 人分割為右側 30 人（高分+中等潛力）與左側 20 人（中等偏低+補救風險）。"
+      },
+      n1: {
+        title: "內部節點 1 (Node 1 - Left)",
+        condition: "訂正正確率 ＜ 75% 之族群",
+        feature: "課堂被提醒專心次數 (Warned Count)",
+        threshold: "＜ 6 次",
+        sampleN: 20,
+        high: 0, mid: 9, low: 11,
+        entropy: 0.993,
+        gain: 0.495,
+        logic: "此群學生概念已出現斷層。若『被提醒次數 ≥ 6次』，代表課堂專注已徹底潰散，100% 進入低分補救組；若小於 6 次，尚有一線生機維持在中等組。"
+      },
+      n2: {
+        title: "內部節點 2 (Node 2 - Right)",
+        condition: "訂正正確率 ≥ 75% 之良好族群",
+        feature: "測驗主動檢查時間 (Exam Check Time)",
+        threshold: "≥ 4 分鐘",
+        sampleN: 30,
+        high: 18, mid: 12, low: 0,
+        entropy: 0.971,
+        gain: 0.421,
+        logic: "在平時概念良好族群中，區分『頂尖高分（≥80）』與『普通中等（60-79）』的核心就在於『後設認知主動檢查時間』。檢查時間 ≥ 4 分鐘者，粗心失分率驟降。"
+      },
+      n3: {
+        title: "內部節點 3 (Node 3 - Right Sub)",
+        condition: "訂正 ≥75% 但測驗檢查 ＜4 分鐘",
+        feature: "平時作業平均分數 (HW Score)",
+        threshold: "≥ 85 分",
+        sampleN: 14,
+        high: 3, mid: 11, low: 0,
+        entropy: 0.749,
+        gain: 0.285,
+        logic: "雖然未花足夠時間檢查，但若平時作業平均達到 85 分以上，代表概念基底非常厚實，仍有少數學生能擠入高分組。"
+      },
+      leafA: {
+        title: "葉節點 A (Leaf A - Remedial)",
+        condition: "訂正 ＜75% 且 提醒專心 ≥6 次",
+        feature: "最終分類判定",
+        threshold: "亟需補救組 (Low Score)",
+        sampleN: 9,
+        high: 0, mid: 0, low: 9,
+        entropy: 0.000,
+        gain: "-",
+        logic: "【完全純淨葉節點】雙重負向特徵疊加（課堂分心＋抄訂正），期末總評分 100% 低於 60 分，需立即啟動個別化學習扶助。"
+      },
+      leafB: {
+        title: "葉節點 B (Leaf B - Mid-Low)",
+        condition: "訂正 ＜75% 但 提醒專心 ＜6 次",
+        feature: "最終分類判定",
+        threshold: "中等偏低組 (Mid Score)",
+        sampleN: 11,
+        high: 0, mid: 9, low: 2,
+        entropy: 0.684,
+        gain: "-",
+        logic: "學生在課堂能保持基本安靜專注，但訂正方法錯誤或迷思概念未解。多數落在 60-69 分區間。"
+      },
+      leafE: {
+        title: "葉節點 E (Leaf E - Top High)",
+        condition: "訂正 ≥75% 且 檢查時間 ≥4 分鐘",
+        feature: "最終分類判定",
+        threshold: "高分潛力組 (High Score)",
+        sampleN: 16,
+        high: 15, mid: 1, low: 0,
+        entropy: 0.337,
+        gain: "-",
+        logic: "【高度純淨優良葉節點】概念清晰加上考場細心，高達 93.8% 學生期末總評突破 85 分以上。"
+      },
+      leafC: {
+        title: "葉節點 C (Leaf C - Mid)",
+        condition: "訂正 ≥75%、檢查 ＜4分、作業 ＜85分",
+        feature: "最終分類判定",
+        threshold: "中等穩定組 (Mid Score)",
+        sampleN: 12,
+        high: 1, mid: 11, low: 0,
+        entropy: 0.391,
+        gain: "-",
+        logic: "日常表現尚可，但欠缺最後一哩路的細緻度與考場驗算習慣，穩定落在 70-79 分中段。"
+      },
+      leafD: {
+        title: "葉節點 D (Leaf D - High Outlier)",
+        condition: "訂正 ≥75%、檢查 ＜4分、作業 ≥85分",
+        feature: "最終分類判定",
+        threshold: "高分組 (High Score)",
+        sampleN: 2,
+        high: 2, mid: 0, low: 0,
+        entropy: 0.000,
+        gain: "-",
+        logic: "概念極強的敏捷型學生，即使做完沒細查，靠著極少失誤依然達到高分門檻。"
+      }
+    };
+
+    function selectTreeNode(nodeId) {
+      // Clear previous active nodes & links in SVG
+      document.querySelectorAll('.tree-node rect').forEach(r => r.classList.remove('node-active'));
+      const targetGroup = document.getElementById('node-' + nodeId);
+      if (targetGroup) {
+        const rect = targetGroup.querySelector('rect');
+        if (rect) rect.classList.add('node-active');
+      }
+
+      const info = nodeDetails[nodeId];
+      if (!info) return;
+
+      document.getElementById('inspect-node-id').innerText = nodeId.toUpperCase();
+
+      const inspector = document.getElementById('inspector-content');
+      inspector.innerHTML = `
+        <div>
+          <h4 class="font-bold text-slate-800 text-sm">${info.title}</h4>
+          <p class="text-xs text-blue-600 font-medium mt-0.5">${info.condition}</p>
+        </div>
+
+        <div class="bg-white p-3 rounded-xl border border-slate-200 text-xs space-y-1.5 font-mono">
+          <div class="flex justify-between"><span class="text-slate-400">決策分割特徵:</span><span class="text-slate-800 font-bold">${info.feature}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">切分門檻條件:</span><span class="text-blue-700 font-bold">${info.threshold}</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">覆蓋樣本數 N:</span><span class="text-slate-800">${info.sampleN} 人</span></div>
+          <div class="flex justify-between"><span class="text-slate-400">當前香農熵 H:</span><span class="text-amber-700 font-bold">${info.entropy}</span></div>
+          ${info.gain !== '-' ? `<div class="flex justify-between"><span class="text-slate-400">資訊獲取量 IG:</span><span class="text-emerald-700 font-bold">${info.gain}</span></div>` : ''}
+        </div>
+
+        <div class="space-y-1.5">
+          <div class="text-xs font-semibold text-slate-500">節點組別組成結構：</div>
+          <div class="w-full bg-slate-200 rounded-full h-3 flex overflow-hidden text-[9px] font-bold text-white text-center">
+            <div style="width: ${(info.high / info.sampleN) * 100}%" class="bg-emerald-500 h-full flex items-center justify-center">${info.high > 0 ? info.high : ''}</div>
+            <div style="width: ${(info.mid / info.sampleN) * 100}%" class="bg-amber-500 h-full flex items-center justify-center">${info.mid > 0 ? info.mid : ''}</div>
+            <div style="width: ${(info.low / info.sampleN) * 100}%" class="bg-rose-500 h-full flex items-center justify-center">${info.low > 0 ? info.low : ''}</div>
+          </div>
+          <div class="flex justify-between text-[11px] text-slate-500">
+            <span class="text-emerald-600">高分: ${info.high}人</span>
+            <span class="text-amber-600">中等: ${info.mid}人</span>
+            <span class="text-rose-600">補救: ${info.low}人</span>
+          </div>
+        </div>
+
+        <div class="bg-slate-100/80 p-3 rounded-xl text-xs text-slate-600 leading-relaxed border border-slate-200">
+          <strong>決策解析：</strong>${info.logic}
+        </div>
+      `;
+    }
+
+    // ----------------------------------------------------
+    // 6. TAB 4: REAL-TIME PREDICTOR & PATH TRACING
+    // ----------------------------------------------------
+    function runPredictor() {
+      // Gather inputs
+      const corrAcc = parseInt(document.getElementById('input-correction-acc').value);
+      const warnCount = parseInt(document.getElementById('input-warn-count').value);
+      const checkTime = parseInt(document.getElementById('input-check-time').value);
+      const hwScore = parseInt(document.getElementById('input-hw-score').value);
+      const hwOntime = parseInt(document.getElementById('input-hw-ontime').value);
+      const askCount = parseInt(document.getElementById('input-ask-count').value);
+      const timeSpent = parseInt(document.getElementById('input-time-spent').value);
+
+      // Update value tags
+      document.getElementById('val-correction-acc').innerText = `${corrAcc} %`;
+      document.getElementById('val-warn-count').innerText = `${warnCount} 次`;
+      document.getElementById('val-check-time').innerText = `${checkTime} 分鐘`;
+      document.getElementById('val-hw-score').innerText = `${hwScore} 分`;
+      document.getElementById('val-hw-ontime').innerText = `${hwOntime} %`;
+      document.getElementById('val-ask-count').innerText = `${askCount} 次`;
+      document.getElementById('val-time-spent').innerText = `${timeSpent} 分`;
+
+      // Clear SVG links highlight
+      document.querySelectorAll('.branch-path').forEach(p => p.classList.remove('branch-active'));
+      document.querySelectorAll('.tree-node rect').forEach(r => r.classList.remove('node-active'));
+
+      // Highlight root in tree
+      const rootNode = document.getElementById('node-root');
+      if (rootNode) rootNode.querySelector('rect').classList.add('node-active');
+
+      const pathSteps = [];
+      let finalGroup = "Mid";
+      let confidence = 85;
+      let scoreRange = "68 ~ 78 分";
+      let advice = "";
+      let leafNodeId = "";
+
+      // Step 1: Root Split (corrAcc >= 75)
+      pathSteps.push(`[根節點] 訂正正確率 = ${corrAcc}%`);
+
+      if (corrAcc < 75) {
+        pathSteps.push(`➔ 未達 75% 門檻，轉向左分支 [內部節點 1]`);
+        document.getElementById('link-root-left')?.classList.add('branch-active');
+        document.getElementById('node-n1')?.querySelector('rect')?.classList.add('node-active');
+
+        // Step 2: Left branch (warnCount >= 6)
+        pathSteps.push(`[節點 1] 課堂被提醒專心 = ${warnCount} 次`);
+        if (warnCount >= 6) {
+          pathSteps.push(`➔ 提醒專心 ≥ 6次，命中 [葉節點 A：亟需補救組]`);
+          document.getElementById('link-n1-left')?.classList.add('branch-active');
+          document.getElementById('node-leafA')?.querySelector('rect')?.classList.add('node-active');
+          leafNodeId = 'leafA';
+          finalGroup = "Low";
+          confidence = 96;
+          scoreRange = "42 ~ 58 分 (警示)";
+          advice = "🚨 <strong>急迫教學介入：</strong> 該生呈現典型『課堂分心遊離＋作業假性訂正』特徵。建議立即啟動個別補救教學，作業訂正應改為<strong>『教師面簽過關制』</strong>，避免其僅抄錄他人解答；課堂座位宜調至前排中央，減少分心刺激物。";
+        } else {
+          pathSteps.push(`➔ 提醒專心 ＜ 6次，命中 [葉節點 B：中等穩定組]`);
+          document.getElementById('link-n1-right')?.classList.add('branch-active');
+          document.getElementById('node-leafB')?.querySelector('rect')?.classList.add('node-active');
+          leafNodeId = 'leafB';
+          finalGroup = "Mid";
+          confidence = 82;
+          scoreRange = "62 ~ 72 分";
+          advice = "⚠️ <strong>學習方法優化：</strong> 該生具備一定課堂紀律，但概念盲點並未在平時作業中徹底解決。建議導師在早自習進行<strong>『錯題重作檢核』</strong>，引導其說明解題步驟，打破『有改就好』的被動心態。";
+        }
+
+      } else {
+        pathSteps.push(`➔ 達到 75% 門檻，轉向右分支 [內部節點 2]`);
+        document.getElementById('link-root-right')?.classList.add('branch-active');
+        document.getElementById('node-n2')?.querySelector('rect')?.classList.add('node-active');
+
+        // Step 2: Right branch (checkTime >= 4)
+        pathSteps.push(`[節點 2] 測驗主動檢查時間 = ${checkTime} 分鐘`);
+        if (checkTime >= 4) {
+          pathSteps.push(`➔ 檢查時間 ≥ 4分鐘，命中 [葉節點 E：高分潛力組]`);
+          document.getElementById('link-n2-right')?.classList.add('branch-active');
+          document.getElementById('node-leafE')?.querySelector('rect')?.classList.add('node-active');
+          leafNodeId = 'leafE';
+          finalGroup = "High";
+          confidence = 94;
+          scoreRange = "88 ~ 98 分 (極優)";
+          advice = "🌟 <strong>高階潛能拔尖：</strong> 該生具備優異的自律訂正習慣與考場後設驗算監控能力。平時基礎已極為扎實，建議可提供<strong>『進階素養挑戰題』或引導擔任小組學伴長</strong>，維持高成就學習動機。";
+        } else {
+          pathSteps.push(`➔ 檢查時間 ＜ 4分鐘，轉向 [內部節點 3：作業平均分數]`);
+          document.getElementById('link-n2-left')?.classList.add('branch-active');
+          document.getElementById('node-n3')?.querySelector('rect')?.classList.add('node-active');
+
+          // Step 3: Sub-split (hwScore >= 85)
+          pathSteps.push(`[節點 3] 作業平均分數 = ${hwScore} 分`);
+          if (hwScore >= 85) {
+            pathSteps.push(`➔ 平時作業 ≥ 85分，底子深厚，落入 [葉節點 D：高分突破]`);
+            document.getElementById('link-n3-right')?.classList.add('branch-active');
+            document.getElementById('node-leafD')?.querySelector('rect')?.classList.add('node-active');
+            leafNodeId = 'leafD';
+            finalGroup = "High";
+            confidence = 88;
+            scoreRange = "82 ~ 90 分";
+            advice = "💡 <strong>後設驗算微調：</strong> 該生概念清晰且天資敏捷，但作答時較為衝動、未充分檢查。只要適度訓練<strong>『雙重驗算檢查清單』</strong>，即可穩坐 90 分以上頂尖群。";
+          } else {
+            pathSteps.push(`➔ 平時作業 ＜ 85分，落入 [葉節點 C：中等穩定組]`);
+            document.getElementById('link-n3-left')?.classList.add('branch-active');
+            document.getElementById('node-leafC')?.querySelector('rect')?.classList.add('node-active');
+            leafNodeId = 'leafC';
+            finalGroup = "Mid";
+            confidence = 90;
+            scoreRange = "70 ~ 79 分";
+            advice = "📖 <strong>細緻度與精熟深化：</strong> 學生態度良好但略嫌粗心，平時分數穩定在 70 多分。建議強化易混淆概念的比較題型，並規定完卷後至少需在考卷寫下 2 題驗算式再交卷。";
+          }
+        }
+      }
+
+      // Update UI Output Card
+      const card = document.getElementById('prediction-card');
+      const title = document.getElementById('pred-group-title');
+      const badge = document.getElementById('pred-confidence-badge');
+      const icon = document.getElementById('pred-badge-icon');
+      const estScore = document.getElementById('pred-estimated-score');
+      const adviceEl = document.getElementById('pred-teacher-advice');
+      const stepsEl = document.getElementById('pred-path-steps');
+
+      badge.innerText = `信心水準 ${confidence}%`;
+      estScore.innerText = `預估期末總評：${scoreRange}`;
+      adviceEl.innerHTML = advice;
+
+      stepsEl.innerHTML = pathSteps.map(st => `<div>${st}</div>`).join('');
+
+      if (finalGroup === "High") {
+        card.className = "bg-white p-6 rounded-2xl border-2 border-emerald-500 shadow-md relative overflow-hidden transition-all duration-300";
+        title.innerText = "🟢 高分潛力組 (High Score)";
+        title.className = "text-2xl sm:text-3xl font-black text-emerald-700 mt-1";
+        icon.className = "w-16 h-16 mx-auto rounded-2xl bg-emerald-100 text-emerald-700 flex items-center justify-center text-3xl shadow-sm mb-3";
+        icon.innerText = "🏆";
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-emerald-100 text-emerald-800";
+        estScore.className = "text-sm font-semibold text-emerald-600 mt-1";
+      } else if (finalGroup === "Mid") {
+        card.className = "bg-white p-6 rounded-2xl border-2 border-amber-500 shadow-md relative overflow-hidden transition-all duration-300";
+        title.innerText = "🟡 中等穩定組 (Mid Score)";
+        title.className = "text-2xl sm:text-3xl font-black text-amber-700 mt-1";
+        icon.className = "w-16 h-16 mx-auto rounded-2xl bg-amber-100 text-amber-700 flex items-center justify-center text-3xl shadow-sm mb-3";
+        icon.innerText = "📈";
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-amber-100 text-amber-800";
+        estScore.className = "text-sm font-semibold text-amber-600 mt-1";
+      } else {
+        card.className = "bg-white p-6 rounded-2xl border-2 border-rose-500 shadow-md relative overflow-hidden transition-all duration-300";
+        title.innerText = "🔴 亟需補救組 (Low Score)";
+        title.className = "text-2xl sm:text-3xl font-black text-rose-700 mt-1";
+        icon.className = "w-16 h-16 mx-auto rounded-2xl bg-rose-100 text-rose-700 flex items-center justify-center text-3xl shadow-sm mb-3";
+        icon.innerText = "⚠️";
+        badge.className = "px-2.5 py-0.5 rounded-full text-xs font-bold bg-rose-100 text-rose-800";
+        estScore.className = "text-sm font-semibold text-rose-600 mt-1";
+      }
+    }
+
+    function loadPresetStudent(preset) {
+      if (preset === 'high_potential') {
+        document.getElementById('input-correction-acc').value = 92;
+        document.getElementById('input-warn-count').value = 1;
+        document.getElementById('input-check-time').value = 8;
+        document.getElementById('input-hw-score').value = 95;
+        document.getElementById('input-hw-ontime').value = 100;
+        document.getElementById('input-ask-count').value = 10;
+        document.getElementById('input-time-spent').value = 30;
+      } else if (preset === 'remedial_distracted') {
+        document.getElementById('input-correction-acc').value = 45;
+        document.getElementById('input-warn-count').value = 9;
+        document.getElementById('input-check-time').value = 0;
+        document.getElementById('input-hw-score').value = 52;
+        document.getElementById('input-hw-ontime').value = 60;
+        document.getElementById('input-ask-count').value = 1;
+        document.getElementById('input-time-spent').value = 24;
+      } else if (preset === 'hardworking_mid') {
+        document.getElementById('input-correction-acc').value = 82;
+        document.getElementById('input-warn-count').value = 2;
+        document.getElementById('input-check-time').value = 2;
+        document.getElementById('input-hw-score').value = 80;
+        document.getElementById('input-hw-ontime').value = 95;
+        document.getElementById('input-ask-count').value = 4;
+        document.getElementById('input-time-spent').value = 38;
+      } else {
+        document.getElementById('input-correction-acc').value = 85;
+        document.getElementById('input-warn-count').value = 2;
+        document.getElementById('input-check-time').value = 6;
+        document.getElementById('input-hw-score').value = 88;
+        document.getElementById('input-hw-ontime').value = 95;
+        document.getElementById('input-ask-count').value = 5;
+        document.getElementById('input-time-spent').value = 32;
+      }
+      runPredictor();
+    }
+
+    // ----------------------------------------------------
+    // INITIALIZATION
+    // ----------------------------------------------------
+    window.addEventListener('DOMContentLoaded', () => {
+      renderTable();
+      renderFeatureImportanceBars();
+      selectTreeNode('root');
+      runPredictor();
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

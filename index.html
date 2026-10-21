@@ -1,0 +1,692 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full scroll-smooth">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Decision Tree Master Hub | 決策樹全景探索門戶網站</title>
+  <!-- Tailwind CSS CDN -->
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      theme: {
+        extend: {
+          colors: {
+            slate: {
+              850: '#151f32',
+              925: '#0b1120',
+              950: '#060a14'
+            }
+          },
+          fontFamily: {
+            sans: ['"Noto Sans TC"', 'Inter', 'system-ui', 'sans-serif'],
+            mono: ['"JetBrains Mono"', '"Fira Code"', 'Consolas', 'monospace'],
+            serif: ['"Noto Serif TC"', 'Georgia', 'serif']
+          }
+        }
+      }
+    }
+  </script>
+  <!-- Google Fonts -->
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600;700&family=JetBrains+Mono:wght@400;600;700&family=Noto+Sans+TC:wght@300;400;500;600;700;800;900&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+  <!-- Lucide Icons CDN -->
+  <script src="https://unpkg.com/lucide@latest"></script>
+  <style>
+    .math-font { font-family: 'JetBrains Mono', 'Fira Code', monospace; }
+    .brand-font { font-family: 'Outfit', 'Noto Sans TC', sans-serif; }
+    
+    /* Custom scrollbars */
+    ::-webkit-scrollbar { width: 7px; height: 7px; }
+    ::-webkit-scrollbar-track { background: #060a14; }
+    ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 4px; }
+    ::-webkit-scrollbar-thumb:hover { background: #334155; }
+
+    /* Formula highlight boxes */
+    .formula-card {
+      background: linear-gradient(135deg, rgba(15, 23, 42, 0.9) 0%, rgba(30, 41, 59, 0.6) 100%);
+      border: 1px solid rgba(56, 189, 248, 0.2);
+    }
+  </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col font-sans selection:bg-cyan-500 selection:text-slate-950 overflow-hidden">
+
+  <!-- ============================================================== -->
+  <!-- 1. TOP GLOBAL NAVIGATION BAR (PORTAL CONTROLLER)               -->
+  <!-- ============================================================== -->
+  <header class="bg-slate-900/95 backdrop-blur-md border-b border-slate-800 z-50 shrink-0">
+    <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
+      
+      <!-- Brand & Title -->
+      <div class="flex items-center space-x-3 cursor-pointer" onclick="switchNav('theory')">
+        <div class="w-10 h-10 rounded-xl bg-gradient-to-tr from-cyan-500 via-blue-600 to-indigo-600 flex items-center justify-center text-slate-950 shadow-lg shadow-cyan-500/20">
+          <i data-lucide="git-fork" class="w-6 h-6 stroke-[2.3]"></i>
+        </div>
+        <div>
+          <div class="flex items-center space-x-2">
+            <h1 class="text-base sm:text-lg font-bold tracking-tight text-white brand-font">Decision Tree Master Hub</h1>
+            <span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-cyan-500/10 text-cyan-400 border border-cyan-500/25">Omni Suite</span>
+          </div>
+          <p class="text-xs text-slate-400">決策樹全景探索門戶：理論全解 × 三大實務應用互動實驗室</p>
+        </div>
+      </div>
+
+      <!-- Navigation Tabs (Home Theory + 3 Interactive Labs) -->
+      <nav class="flex space-x-1 bg-slate-950/90 p-1.5 rounded-xl border border-slate-800/80 overflow-x-auto text-xs max-w-full">
+        <!-- Tab 0: Core Theory -->
+        <button onclick="switchNav('theory')" id="nav-btn-theory" class="nav-tab-btn px-3 py-1.5 rounded-lg font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30">
+          <i data-lucide="book-open" class="w-4 h-4"></i>
+          <span>核心觀念與邏輯</span>
+        </button>
+
+        <!-- Tab 1: Animal Classification -->
+        <button onclick="switchNav('animal')" id="nav-btn-animal" class="nav-tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="bug" class="w-4 h-4 text-emerald-400"></i>
+          <span>1. 動物分類實驗室</span>
+        </button>
+
+        <!-- Tab 2: Education Analytics -->
+        <button onclick="switchNav('edu')" id="nav-btn-edu" class="nav-tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="graduation-cap" class="w-4 h-4 text-blue-400"></i>
+          <span>2. 教育學習分析 (EduTree)</span>
+        </button>
+
+        <!-- Tab 3: Banking & Credit Assessment -->
+        <button onclick="switchNav('bank')" id="nav-btn-bank" class="nav-tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+          <i data-lucide="landmark" class="w-4 h-4 text-amber-400"></i>
+          <span>3. 金融信用審核 (BankTree)</span>
+        </button>
+      </nav>
+
+    </div>
+  </header>
+
+  <!-- ============================================================== -->
+  <!-- 2. MAIN VIEWPORT CONTAINER                                     -->
+  <!-- ============================================================== -->
+  <main class="flex-1 overflow-hidden relative">
+
+    <!-- ============================================================== -->
+    <!-- VIEW A: FLAGSHIP THEORY & FOUNDATIONS ARTICLE                  -->
+    <!-- ============================================================== -->
+    <div id="view-theory" class="h-full overflow-y-auto p-4 sm:p-6 lg:p-8">
+      <div class="max-w-6xl mx-auto space-y-12 pb-24">
+
+        <!-- Hero Article Banner -->
+        <div class="relative bg-gradient-to-br from-slate-900 via-slate-850 to-slate-925 border border-slate-800 rounded-3xl p-6 sm:p-10 shadow-2xl overflow-hidden">
+          <div class="absolute -right-16 -top-16 w-80 h-80 bg-cyan-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          <div class="absolute -left-16 -bottom-16 w-80 h-80 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none"></div>
+          
+          <div class="relative z-10 space-y-4 max-w-3xl">
+            <div class="inline-flex items-center space-x-2 px-3 py-1 rounded-full bg-cyan-500/10 border border-cyan-500/30 text-cyan-400 text-xs font-mono font-semibold">
+              <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+              <span>Data Science & Supervised Learning Monograph</span>
+            </div>
+            <h1 class="text-2xl sm:text-4xl lg:text-5xl font-black text-white tracking-tight leading-tight">
+              決策樹 (Decision Tree) <br>
+              <span class="bg-gradient-to-r from-cyan-400 via-blue-400 to-indigo-400 bg-clip-text text-transparent">
+                核心觀念、運作邏輯及應用全景解構
+              </span>
+            </h1>
+            <p class="text-sm sm:text-base text-slate-300 leading-relaxed">
+              決策樹是現代機器學習的基石之一。它不僅具備近乎人類思維的<strong>「可解釋白箱模型 (White-box Model)」</strong>天賦，更是隨機森林 (Random Forest) 與梯度提升樹 (XGBoost/LightGBM) 等王者級演算法的原點。本文深入剖析其數學幾何本質、資訊論切分準則、過擬合剪枝對抗，以及跨領域之實戰部署。
+            </p>
+
+            <!-- Quick Table of Contents Chips -->
+            <div class="pt-4 flex flex-wrap gap-2 text-xs">
+              <span class="text-slate-400 self-center">章節導讀：</span>
+              <a href="#chap-1" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">§1 白箱本質</a>
+              <a href="#chap-2" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">§2 核心數學指標</a>
+              <a href="#chap-3" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">§3 遞歸建樹架構</a>
+              <a href="#chap-4" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">§4 剪枝技術 (Pruning)</a>
+              <a href="#chap-5" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">§5 演進與侷限</a>
+              <a href="#chap-6" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 transition">§6 實務案例導讀</a>
+            </div>
+          </div>
+        </div>
+
+        <!-- ========================================================== -->
+        <!-- CHAPTER 1: DEFINITION & SUPERVISED LEARNING POSITION       -->
+        <!-- ========================================================== -->
+        <section id="chap-1" class="space-y-4">
+          <div class="flex items-center space-x-2 text-cyan-400">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-cyan-500/10 border border-cyan-500/25">Chapter 1</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">什麼是決策樹？白箱模型與監督式學習定位</h2>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 text-slate-300 text-sm leading-relaxed">
+            <p>
+              在機器學習的範疇中，<strong>決策樹 (Decision Tree)</strong> 屬於非參數的<strong>監督式學習 (Supervised Learning)</strong> 演算法，能同時勝任<strong>分類 (Classification)</strong> 與<strong>迴歸 (Regression)</strong> 任務。
+            </p>
+            <p>
+              日常生活中，當我們面臨複雜決策時，常會使用類似「二十個是非題」的推理路徑——例如：<em>「今天有沒有下雨？若有，是否要出門？若要出門，有沒有帶傘？」</em>。決策樹正是將這種人類自然的條件分支機制，透過演算法轉化為由資料驅動的數學結構。
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4 pt-2">
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="flex items-center space-x-2 text-emerald-400 font-bold mb-2">
+                  <i data-lucide="eye" class="w-4 h-4"></i>
+                  <span>白箱模型 (White-box Model)</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  不同於深度類神經網路或高維支援向量機 (SVM) 難以透視內部權重的「黑箱」，決策樹的推導過程完全可被還原成一連串條理分明的 <code class="font-mono text-emerald-300">IF-THEN-ELSE</code> 邏輯規則。這在醫療診斷、司法量刑與金融信貸審批等高度需要審查法規合規性的領域中，具有不可替代的信任價值。
+                </p>
+              </div>
+
+              <div class="bg-slate-950 p-4 rounded-xl border border-slate-800">
+                <div class="flex items-center space-x-2 text-cyan-400 font-bold mb-2">
+                  <i data-lucide="layers" class="w-4 h-4"></i>
+                  <span>空間幾何分割本質</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  在數學本質上，決策樹相當於在特徵空間（Feature Space）中，使用<strong>平行於座標軸的正交超平面 (Axis-aligned Hyperplanes)</strong>，將高維資料空間反覆遞歸切割成互不重疊的矩形正交區塊，每個區塊代表一個葉節點的預測類別或平均值。
+                </p>
+              </div>
+            </div>
+
+            <!-- Chapter 1 Key Takeaways Card -->
+            <div class="bg-cyan-950/20 border border-cyan-500/30 p-4 rounded-xl flex items-start space-x-3 text-xs text-slate-200">
+              <i data-lucide="check-circle" class="w-5 h-5 text-cyan-400 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-cyan-300 block mb-1">§1 重點速記清單 (Key Takeaways)：</strong>
+                決策樹是天然的白箱透明演算法；它不預設資料分佈（非參數模型），本質是利用正交軸垂直切線對特徵空間進行階層式多重劃分。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- CHAPTER 2: MATHEMATICAL FOUNDATIONS & IMPURITY METRICS     -->
+        <!-- ========================================================== -->
+        <section id="chap-2" class="space-y-4">
+          <div class="flex items-center space-x-2 text-blue-400">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-blue-500/10 border border-blue-500/25">Chapter 2</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">核心數學與運作邏輯：不純度量化與特徵挑選</h2>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-6 text-slate-300 text-sm leading-relaxed">
+            <p>
+              決策樹面臨的首要核心問題是：<strong>「在當前的節點上，演算法該挑選哪一個特徵？切在哪一個數值？」</strong><br>
+              答案是：<strong>選擇切分後能讓資料群體最快「純化 (Pure)」、混亂度下降最劇烈者。</strong> 為此，數學家引入了以下三項經典量化工具：
+            </p>
+
+            <!-- Mathematical Breakdown Cards -->
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              
+              <!-- 1. Shannon Entropy -->
+              <div class="formula-card p-5 rounded-2xl space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-mono text-emerald-400 font-bold uppercase">1. 香農熵 (Shannon Entropy)</span>
+                  <span class="text-[10px] bg-emerald-500/20 text-emerald-300 px-2 py-0.5 rounded font-mono">ID3 / C4.5</span>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                  <div class="text-base sm:text-lg font-mono font-bold text-white tracking-wide">
+                    H(D) = - ∑<sub>i=1</sub><sup>c</sup> p<sub>i</sub> · log<sub>2</sub>(p<sub>i</sub>)
+                  </div>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  源於克勞德·香農 (Claude Shannon) 的資訊論。度量資料集中類別分佈的「不確定性或混亂程度」。若節點中所有樣本皆為同一類別，$p_1 = 1$，則 $H(D) = 0$（完全純淨）；若兩類各占一半，$H(D) = 1$ bit（混亂度最高）。
+                </p>
+              </div>
+
+              <!-- 2. Gini Impurity -->
+              <div class="formula-card p-5 rounded-2xl space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-mono text-cyan-400 font-bold uppercase">2. 基尼不純度 (Gini Impurity)</span>
+                  <span class="text-[10px] bg-cyan-500/20 text-cyan-300 px-2 py-0.5 rounded font-mono">CART 預設</span>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                  <div class="text-base sm:text-lg font-mono font-bold text-white tracking-wide">
+                    Gini(D) = 1 - ∑<sub>i=1</sub><sup>c</sup> (p<sub>i</sub>)<sup>2</sup>
+                  </div>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  衡量從節點隨機抽取兩個樣本，其類別標籤不一致的機率。相較於香農熵涉及高耗能的對數 ($\log_2$) 運算，基尼不純度僅需乘法平方，在工業實作（如 scikit-learn 的 CART）中計算效能更為優越。
+                </p>
+              </div>
+
+              <!-- 3. Information Gain -->
+              <div class="formula-card p-5 rounded-2xl space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-mono text-amber-400 font-bold uppercase">3. 資訊獲取量 (Information Gain)</span>
+                  <span class="text-[10px] bg-amber-500/20 text-amber-300 px-2 py-0.5 rounded font-mono">特徵選擇標準</span>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                  <div class="text-xs sm:text-sm font-mono font-bold text-white tracking-wide overflow-x-auto py-1">
+                    IG(D, A) = H(D) - ∑<sub>v∈Values(A)</sub> (|D<sub>v</sub>| / |D|) · H(D<sub>v</sub>)
+                  </div>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  切分前父節點熵值，扣除依照特徵 $A$ 切分後各子節點的加權平均熵。<strong>資訊獲取量越大，代表該特徵切分後帶來的純度提升愈顯著。</strong>演算法在每個節點貪婪挑選 $IG$ 最大者作為劃分依據。
+                </p>
+              </div>
+
+              <!-- 4. Gain Ratio & Variance Reduction -->
+              <div class="formula-card p-5 rounded-2xl space-y-3">
+                <div class="flex justify-between items-center">
+                  <span class="text-xs font-mono text-indigo-400 font-bold uppercase">4. 資訊獲取率與方差減少</span>
+                  <span class="text-[10px] bg-indigo-500/20 text-indigo-300 px-2 py-0.5 rounded font-mono">C4.5 & CART 迴歸</span>
+                </div>
+                <div class="bg-slate-950 p-3 rounded-xl border border-slate-800 text-center">
+                  <div class="text-xs sm:text-sm font-mono font-bold text-white tracking-wide py-1">
+                    GainRatio = IG(D, A) / SplitInfo(A)
+                  </div>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  傳統 $IG$ 存在嚴重偏好「分支極多之特徵」（如身分證號或日期）的缺陷。C4.5 引進內在固有資訊 (SplitInfo) 進行懲罰。而在迴歸樹任務中，則改以<strong>方差減少量 (Variance Reduction)</strong> 或均方誤差 (MSE) 取代熵。
+                </p>
+              </div>
+
+            </div>
+
+            <!-- Chapter 2 Key Takeaways Card -->
+            <div class="bg-blue-950/20 border border-blue-500/30 p-4 rounded-xl flex items-start space-x-3 text-xs text-slate-200">
+              <i data-lucide="check-circle" class="w-5 h-5 text-blue-400 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-blue-300 block mb-1">§2 重點速記清單 (Key Takeaways)：</strong>
+                決策樹本質是一場「消弭熵（混亂度）」的競賽。ID3 用資訊獲取量 ($IG$)，C4.5 用獲取率修正多類別偏好，CART 則採用計算輕快的基尼不純度 (Gini) 或方差減少進行二元切割。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- CHAPTER 3: RECURSIVE PARTITIONING & TREE TOPOLOGY          -->
+        <!-- ========================================================== -->
+        <section id="chap-3" class="space-y-4">
+          <div class="flex items-center space-x-2 text-indigo-400">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-indigo-500/10 border border-indigo-500/25">Chapter 3</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">特徵切分與遞歸建樹機制 (Recursive Partitioning)</h2>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-4 text-slate-300 text-sm leading-relaxed">
+            <p>
+              決策樹的生長遵循<strong>自頂向下、分而治之 (Top-Down Divide and Conquer)</strong> 的貪婪演算法（如 Hunt's 演算法骨架）。其拓撲結構主要由三類節點構成：
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-3 pt-1">
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-xs font-mono font-bold text-cyan-400 block mb-1">1. 根節點 (Root Node)</span>
+                <p class="text-xs text-slate-400">包含全部訓練樣本的母體起點。在此處歷經全特徵掃描，挑出全域辨識力最強的第一刀。</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-xs font-mono font-bold text-blue-400 block mb-1">2. 內部節點 (Internal Node)</span>
+                <p class="text-xs text-slate-400">中途的中繼判斷節點，每個內部節點對應一個特定的特徵測試條件（如 $Age \le 30$ 或 $Income > 100$）。</p>
+              </div>
+              <div class="p-3.5 rounded-xl bg-slate-950 border border-slate-800">
+                <span class="text-xs font-mono font-bold text-emerald-400 block mb-1">3. 葉節點 (Leaf Node)</span>
+                <p class="text-xs text-slate-400">終端結論。在分類樹中代表<strong>多數決類別標籤</strong>；在迴歸樹中代表落入該區間樣本的<strong>平均目標值</strong>。</p>
+              </div>
+            </div>
+
+            <div class="space-y-2 pt-2">
+              <strong class="text-white block">生長遞歸停止條件 (Stopping Criteria)：</strong>
+              <ul class="list-disc list-inside space-y-1.5 text-xs text-slate-400 pl-2">
+                <li>節點內的樣本已完全屬於同一類別（純度達 100%，$H(D) = 0$ 或 $Gini = 0$）。</li>
+                <li>所有候選特徵皆已窮盡使用，無法再提供進一步切分。</li>
+                <li>達到預先定義的約束門檻（例如：達到最大樹深度 <code class="font-mono text-slate-200">max_depth</code> 或節點樣本數低於 <code class="font-mono text-slate-200">min_samples_split</code>）。</li>
+              </ul>
+            </div>
+
+            <!-- Chapter 3 Key Takeaways Card -->
+            <div class="bg-indigo-950/20 border border-indigo-500/30 p-4 rounded-xl flex items-start space-x-3 text-xs text-slate-200">
+              <i data-lucide="check-circle" class="w-5 h-5 text-indigo-400 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-indigo-300 block mb-1">§3 重點速記清單 (Key Takeaways)：</strong>
+                決策樹採用貪婪遞歸分割（只顧當前步驟最佳，不保證全域最優）。若不加設停止條件，演算法將固執地生長直到每一個樣本都被獨立隔開。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- CHAPTER 4: OVERFITTING & PRUNING TECHNIQUES               -->
+        <!-- ========================================================== -->
+        <section id="chap-4" class="space-y-4">
+          <div class="flex items-center space-x-2 text-rose-400">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-rose-500/10 border border-rose-500/25">Chapter 4</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">過擬合 (Overfitting) 與剪枝技術：預剪枝 vs. 後剪枝</h2>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-5 text-slate-300 text-sm leading-relaxed">
+            <p>
+              若放任決策樹無限向下生長，它將試圖完美遷就訓練集裡的每一個異常值與隨機雜訊（如一隻因基因突變而沒有毛的貓），形成極端繁複的枝節。此時<strong>訓練集準確率雖達到 100%，但在面對未知的新測試資料時，泛化預測能力將崩潰</strong>。這就是典型的<strong>過擬合 (Overfitting / High Variance)</strong>。
+            </p>
+
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+              <!-- Pre-pruning -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                <div class="flex items-center space-x-2 text-emerald-400 font-bold">
+                  <i data-lucide="shield-alert" class="w-4 h-4"></i>
+                  <span>預剪枝 (Pre-pruning / Early Stopping)</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  在樹的建立過程中<strong>「及早踩煞車」</strong>。只要某次分割未達到門檻便直接停止生長：
+                </p>
+                <ul class="list-disc list-inside text-xs text-slate-400 space-y-1">
+                  <li>限制樹的最大深度 (<code class="font-mono text-slate-300">max_depth</code>)</li>
+                  <li>限制節點最少樣本數 (<code class="font-mono text-slate-300">min_samples_split</code>)</li>
+                  <li>限制葉節點最小容量 (<code class="font-mono text-slate-300">min_samples_leaf</code>)</li>
+                  <li>設定資訊獲取量增益門檻 ($\Delta IG > \epsilon$)</li>
+                </ul>
+                <div class="text-[11px] text-amber-400 bg-amber-500/10 p-2 rounded border border-amber-500/20">
+                  ⚠️ <strong>潛在風險：</strong> 可能遭遇「目光短淺 (Horizon Effect)」，某些看似平庸的分割背後，可能隱藏著極具鑑別力的高價值特徵組合。
+                </div>
+              </div>
+
+              <!-- Post-pruning -->
+              <div class="bg-slate-950 p-4 rounded-2xl border border-slate-800 space-y-2.5">
+                <div class="flex items-center space-x-2 text-cyan-400 font-bold">
+                  <i data-lucide="scissors" class="w-4 h-4"></i>
+                  <span>後剪枝 (Post-pruning / Cost-Complexity Pruning)</span>
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  先讓整棵樹完全長成（包含過擬合分枝），再透過獨立驗證集由葉節點由下而上反向評估修剪。
+                </p>
+                <div class="bg-slate-900 p-2.5 rounded-lg border border-slate-800 text-center font-mono text-xs text-slate-200">
+                  R<sub>α</sub>(T) = R(T) + α · |T|
+                </div>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  其中 $R(T)$ 為樹的訓練誤差，$|T|$ 為葉節點數量，$\alpha \ge 0$ 為懲罰參數。透過增加複雜度懲罰項，將效益不足的子樹坍塌折疊為單一葉節點。實務上後剪枝往往比預剪枝更能找到全域平衡點。
+                </p>
+              </div>
+            </div>
+
+            <!-- Chapter 4 Key Takeaways Card -->
+            <div class="bg-rose-950/20 border border-rose-500/30 p-4 rounded-xl flex items-start space-x-3 text-xs text-slate-200">
+              <i data-lucide="check-circle" class="w-5 h-5 text-rose-400 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-rose-300 block mb-1">§4 重點速記清單 (Key Takeaways)：</strong>
+                剪枝是決策樹對抗過擬合的核心武器。預剪枝省時間但容易短視；後剪枝（成本複雜度剪枝 $\alpha$）全面而穩健，是提高泛化能力的大師級手段。
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- CHAPTER 5: ADVANTAGES, LIMITATIONS & MODERN EVOLUTION      -->
+        <!-- ========================================================== -->
+        <section id="chap-5" class="space-y-4">
+          <div class="flex items-center space-x-2 text-emerald-400">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/10 border border-emerald-500/25">Chapter 5</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">優勢、致命弱點與實務演進：邁向隨機森林與 XGBoost</h2>
+          </div>
+
+          <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-6 space-y-6 text-slate-300 text-sm leading-relaxed">
+            
+            <!-- Comparison Table -->
+            <div class="overflow-x-auto">
+              <table class="w-full text-left text-xs border-collapse">
+                <thead>
+                  <tr class="border-b border-slate-800 text-slate-400 font-mono">
+                    <th class="py-2.5 px-3">維度</th>
+                    <th class="py-2.5 px-3 text-emerald-400">決策樹之絕對優勢 (Pros)</th>
+                    <th class="py-2.5 px-3 text-rose-400">單一決策樹之致命弱點 (Cons)</th>
+                  </tr>
+                </thead>
+                <tbody class="divide-y divide-slate-800/60">
+                  <tr>
+                    <td class="py-3 px-3 font-bold text-white font-mono">可解釋性</td>
+                    <td class="py-3 px-3 text-slate-300">極致的白箱透明度，能向法規單位或非技術主管交代每一筆推導。</td>
+                    <td class="py-3 px-3 text-slate-400">當樹深超過 8~10 層後，人類大腦已難以消化龐大的條件交集。</td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-3 font-bold text-white font-mono">特徵工程</td>
+                    <td class="py-3 px-3 text-slate-300">完全不需特徵縮放（Scale-invariant）；免疫於極端離群值。</td>
+                    <td class="py-3 px-3 text-slate-400">無法直接捕捉特徵間的斜向連續線性組合（軸對齊限制）。</td>
+                  </tr>
+                  <tr>
+                    <td class="py-3 px-3 font-bold text-white font-mono">模型穩定度</td>
+                    <td class="py-3 px-3 text-slate-300">推論速度極快（時間複雜度僅 $O(\text{depth})$）。</td>
+                    <td class="py-3 px-3 text-slate-400 font-semibold text-rose-300">高方差 (High Variance)！資料微調 1 筆樣本可能使根節點翻轉。</td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+
+            <!-- Evolutionary Leap: Ensemble Methods -->
+            <div class="bg-slate-950 p-5 rounded-2xl border border-slate-800 space-y-3">
+              <div class="flex items-center space-x-2 text-cyan-400">
+                <i data-lucide="network" class="w-5 h-5"></i>
+                <h3 class="font-bold text-base text-white">工業界的典範轉移：集成學習 (Ensemble Learning)</h3>
+              </div>
+              <p class="text-xs text-slate-300 leading-relaxed">
+                為了解決單一決策樹「容易過擬合」與「高方差易動搖」的致命傷，統計學家與資料科學家發展出兩大集成流派：
+              </p>
+              <div class="grid grid-cols-1 md:grid-cols-2 gap-3 pt-1 text-xs">
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <span class="text-cyan-300 font-bold block">1. 隨機森林 (Random Forest - Bagging 策略)：</span>
+                  <p class="text-slate-400 leading-relaxed">
+                    同時種植數百棵深層樹。每棵樹使用 Bootstrap 抽樣資料並隨機挑選特徵子集，最終透過「多數決表決」平滑化方差，徹底根治過擬合問題。
+                  </p>
+                </div>
+                <div class="p-3.5 rounded-xl bg-slate-900 border border-slate-800 space-y-1.5">
+                  <span class="text-emerald-300 font-bold block">2. 梯度提升樹 (XGBoost / LightGBM - Boosting 策略)：</span>
+                  <p class="text-slate-400 leading-relaxed">
+                    序列式訓練多棵淺層弱學習樹，每一棵後續樹專門修正前面所有樹留下來的「殘差 (Residuals)」。在結構化表格資料競賽中至今仍是效能王者。
+                  </p>
+                </div>
+              </div>
+            </div>
+
+            <!-- Chapter 5 Key Takeaways Card -->
+            <div class="bg-emerald-950/20 border border-emerald-500/30 p-4 rounded-xl flex items-start space-x-3 text-xs text-slate-200">
+              <i data-lucide="check-circle" class="w-5 h-5 text-emerald-400 shrink-0 mt-0.5"></i>
+              <div>
+                <strong class="text-emerald-300 block mb-1">§5 重點速記清單 (Key Takeaways)：</strong>
+                單一樹雖脆弱，但一旦「聚樹成林」（隨機森林）或「梯度迭代」（XGBoost），就具備了當今結構化資料最強大的預測戰力！
+              </div>
+            </div>
+          </div>
+        </section>
+
+        <!-- ========================================================== -->
+        <!-- CHAPTER 6: PRACTICAL APPLICATIONS & INTERACTIVE LAB TOURS  -->
+        <!-- ========================================================== -->
+        <section id="chap-6" class="space-y-4">
+          <div class="flex items-center space-x-2 text-amber-400">
+            <span class="text-xs font-mono font-bold px-2 py-0.5 rounded bg-amber-500/10 border border-amber-500/25">Chapter 6</span>
+            <h2 class="text-xl sm:text-2xl font-bold text-white">跨領域實務應用矩陣與本站三大情境實驗室導讀</h2>
+          </div>
+
+          <div class="grid grid-cols-1 md:grid-cols-3 gap-5 pt-2">
+
+            <!-- Card 1: Animal Lab -->
+            <div class="bg-slate-900/90 border border-emerald-500/40 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-emerald-400 transition shadow-lg group">
+              <div class="space-y-2.5">
+                <div class="w-10 h-10 rounded-xl bg-emerald-500/20 text-emerald-400 flex items-center justify-center font-bold text-lg">
+                  <i data-lucide="bug" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-emerald-500/20 text-emerald-300">案例 1：生物分類學</span>
+                </div>
+                <h3 class="text-lg font-bold text-white group-hover:text-emerald-300 transition">動物分類實驗室</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  以最直觀的「脊椎、羽毛、生活環境」特徵切分，直擊香農熵 $H$ 與基尼不純度 $Gini$ 的遞減歷程。支援<strong>無限層級特徵拖拉自建決策樹</strong>與剪枝過擬合沙盒。
+                </p>
+              </div>
+              <button onclick="switchNav('animal')" class="w-full py-2.5 px-3 bg-emerald-600 hover:bg-emerald-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow">
+                <span>啟動動物分類實驗室</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Card 2: EduTree Analytics -->
+            <div class="bg-slate-900/90 border border-blue-500/40 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-blue-400 transition shadow-lg group">
+              <div class="space-y-2.5">
+                <div class="w-10 h-10 rounded-xl bg-blue-500/20 text-blue-400 flex items-center justify-center font-bold text-lg">
+                  <i data-lucide="graduation-cap" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-blue-500/20 text-blue-300">案例 2：智慧教育大數據</span>
+                </div>
+                <h3 class="text-lg font-bold text-white group-hover:text-blue-300 transition">學習分析決策樹 (EduTree)</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  涵蓋 50 位真實常模學生的課堂專注、作業訂正與測驗後設行為。揭露<strong>「假性訂正」</strong>與<strong>「檢查時間」</strong>在預測學業成效上的巨大區辨力，提供個別化輔導建議。
+                </p>
+              </div>
+              <button onclick="switchNav('edu')" class="w-full py-2.5 px-3 bg-blue-600 hover:bg-blue-500 text-white font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow">
+                <span>啟動教育學習分析系統</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+            <!-- Card 3: BankTree Insight -->
+            <div class="bg-slate-900/90 border border-amber-500/40 rounded-2xl p-5 flex flex-col justify-between space-y-4 hover:border-amber-400 transition shadow-lg group">
+              <div class="space-y-2.5">
+                <div class="w-10 h-10 rounded-xl bg-amber-500/20 text-amber-400 flex items-center justify-center font-bold text-lg">
+                  <i data-lucide="landmark" class="w-6 h-6"></i>
+                </div>
+                <div class="flex items-center space-x-2">
+                  <span class="text-[10px] font-mono font-bold px-2 py-0.5 rounded bg-amber-500/20 text-amber-300">案例 3：金融消金風控</span>
+                </div>
+                <h3 class="text-lg font-bold text-white group-hover:text-amber-300 transition">金融信用審核 (BankTree)</h3>
+                <p class="text-xs text-slate-400 leading-relaxed">
+                  兼具<strong>防守端（臨櫃 10 項風控指標、DTI 負債比、核貸定價報告書）</strong>與<strong>進攻端（45位存戶精準電銷雷達與話術說帖）</strong>的雙核心銀行決策系統。
+                </p>
+              </div>
+              <button onclick="switchNav('bank')" class="w-full py-2.5 px-3 bg-amber-600 hover:bg-amber-500 text-slate-950 font-bold rounded-xl text-xs flex items-center justify-center space-x-1.5 transition shadow">
+                <span>啟動金融信用審核系統</span>
+                <i data-lucide="arrow-right" class="w-3.5 h-3.5"></i>
+              </button>
+            </div>
+
+          </div>
+        </section>
+
+      </div>
+    </div>
+
+    <!-- ============================================================== -->
+    <!-- VIEW B: EMBEDDED IFRAME WORKSPACE FOR THE 3 LABS               -->
+    <!-- ============================================================== -->
+    <div id="view-iframe-container" class="h-full flex flex-col hidden bg-slate-950">
+      
+      <!-- Sub-controller bar for currently running lab -->
+      <div class="bg-slate-900 border-b border-slate-800 px-4 py-2 flex flex-wrap justify-between items-center gap-2 shrink-0">
+        <div class="flex items-center space-x-2 text-xs">
+          <span class="w-2.5 h-2.5 rounded-full bg-emerald-500 animate-pulse"></span>
+          <span class="font-bold text-white" id="iframe-app-title">目前運作應用程式：動物分類實驗室</span>
+          <span class="font-mono text-slate-400 text-[11px]" id="iframe-app-file">(animal-classification.html)</span>
+        </div>
+
+        <div class="flex items-center space-x-1.5 text-xs">
+          <!-- Reload -->
+          <button onclick="reloadCurrentIframe()" title="重新整理當前應用" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center space-x-1 transition">
+            <i data-lucide="rotate-cw" class="w-3.5 h-3.5"></i>
+            <span>重新整理</span>
+          </button>
+          
+          <!-- Open in New Tab -->
+          <button onclick="openCurrentIframeInNewTab()" title="在獨立分頁中全螢幕打開" class="px-2.5 py-1 rounded-lg bg-slate-800 hover:bg-slate-700 text-slate-300 flex items-center space-x-1 transition">
+            <i data-lucide="external-link" class="w-3.5 h-3.5"></i>
+            <span>獨立分頁開啟</span>
+          </button>
+
+          <!-- Back to Theory Home -->
+          <button onclick="switchNav('theory')" class="px-3 py-1 rounded-lg bg-cyan-600/80 hover:bg-cyan-600 text-white font-medium flex items-center space-x-1 transition">
+            <i data-lucide="book-open" class="w-3.5 h-3.5"></i>
+            <span>返回理論主頁</span>
+          </button>
+        </div>
+      </div>
+
+      <!-- Iframe Elements (Lazy / pre-targeted) -->
+      <div class="flex-1 w-full h-full relative bg-slate-900">
+        <iframe id="app-iframe" src="about:blank" class="w-full h-full border-0 select-auto" allow="fullscreen"></iframe>
+      </div>
+    </div>
+
+  </main>
+
+  <!-- ============================================================== -->
+  <!-- 3. JAVASCRIPT NAVIGATION ROUTER & APP SWITCHER                 -->
+  <!-- ============================================================== -->
+  <script>
+    const APP_REGISTRY = {
+      'animal': {
+        title: '動物分類實驗室 (Animal Classification Lab)',
+        file: 'animal-classification.html',
+        color: 'from-emerald-600 to-teal-600',
+        activeBtnId: 'nav-btn-animal'
+      },
+      'edu': {
+        title: '智慧教育學習分析決策樹系統 (EduTree Analytics)',
+        file: 'edutree-analytics.html',
+        color: 'from-blue-600 to-indigo-600',
+        activeBtnId: 'nav-btn-edu'
+      },
+      'bank': {
+        title: 'BankTree Insight：金融信用評估與精準授信系統',
+        file: 'banktree_insight.html',
+        color: 'from-amber-600 to-orange-600',
+        activeBtnId: 'nav-btn-bank'
+      }
+    };
+
+    let currentAppKey = null;
+
+    function switchNav(targetKey) {
+      const viewTheory = document.getElementById('view-theory');
+      const viewIframe = document.getElementById('view-iframe-container');
+      const iframe = document.getElementById('app-iframe');
+
+      // Reset all nav button styles
+      document.querySelectorAll('.nav-tab-btn').forEach(btn => {
+        btn.className = 'nav-tab-btn px-3 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60';
+      });
+
+      if (targetKey === 'theory') {
+        currentAppKey = null;
+        viewTheory.classList.remove('hidden');
+        viewIframe.classList.add('hidden');
+        document.getElementById('nav-btn-theory').className = 'nav-tab-btn px-3 py-1.5 rounded-lg font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap bg-gradient-to-r from-cyan-600 to-blue-600 text-white shadow-md shadow-cyan-600/30';
+      } else {
+        const app = APP_REGISTRY[targetKey];
+        if (!app) return;
+
+        currentAppKey = targetKey;
+        viewTheory.classList.add('hidden');
+        viewIframe.classList.remove('hidden');
+
+        // Highlight selected tab
+        const activeBtn = document.getElementById(app.activeBtnId);
+        if (activeBtn) {
+          activeBtn.className = `nav-tab-btn px-3 py-1.5 rounded-lg font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap bg-gradient-to-r ${app.color} text-white shadow-md`;
+        }
+
+        // Update Sub-controller header
+        document.getElementById('iframe-app-title').innerText = `目前運作：${app.title}`;
+        document.getElementById('iframe-app-file').innerText = `(${app.file})`;
+
+        // Load into iframe if not already loaded
+        if (iframe.src.indexOf(app.file) === -1) {
+          iframe.src = app.file;
+        }
+      }
+
+      lucide.createIcons();
+    }
+
+    function reloadCurrentIframe() {
+      const iframe = document.getElementById('app-iframe');
+      if (iframe && currentAppKey) {
+        const app = APP_REGISTRY[currentAppKey];
+        iframe.src = app.file;
+      }
+    }
+
+    function openCurrentIframeInNewTab() {
+      if (currentAppKey) {
+        const app = APP_REGISTRY[currentAppKey];
+        window.open(app.file, '_blank');
+      }
+    }
+
+    // Initialize Lucide icons on boot
+    window.addEventListener('DOMContentLoaded', () => {
+      lucide.createIcons();
+    });
+  </script>
+</body>
+</html>

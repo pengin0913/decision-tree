@@ -1,0 +1,1715 @@
+<!DOCTYPE html>
+<html lang="zh-TW" class="h-full">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>動物決策樹資料科學實驗室 | Animal Decision Tree Data Science Lab</title>
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        slate: { 850: '#141d2f', 950: '#060b17' }
+                    },
+                    fontFamily: {
+                        sans: ['"Noto Sans TC"', 'Inter', 'system-ui', 'sans-serif'],
+                        mono: ['"Fira Code"', 'Consolas', 'Courier New', 'monospace']
+                    }
+                }
+            }
+        }
+    </script>
+    <!-- Google Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Fira+Code:wght@400;500;600&family=Noto+Sans+TC:wght@300;400;500;600;700;800&family=Outfit:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <!-- Lucide Icons CDN -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        .math-font { font-family: 'Fira Code', monospace; }
+        .title-font { font-family: 'Outfit', 'Noto Sans TC', sans-serif; }
+        ::-webkit-scrollbar { width: 6px; height: 6px; }
+        ::-webkit-scrollbar-track { background: #080e1d; }
+        ::-webkit-scrollbar-thumb { background: #1e293b; border-radius: 3px; }
+        ::-webkit-scrollbar-thumb:hover { background: #334155; }
+        .drag-target-active {
+            border-color: #38bdf8 !important;
+            background-color: rgba(56, 189, 248, 0.12) !important;
+            transform: scale(1.02);
+        }
+        .branch-line { stroke: #334155; stroke-width: 2; stroke-dasharray: 4,4; }
+    </style>
+</head>
+<body class="bg-slate-950 text-slate-100 h-full flex flex-col font-sans selection:bg-emerald-500 selection:text-slate-950 overflow-hidden">
+
+    <!-- Top Navigation Header -->
+    <header class="bg-slate-900/90 backdrop-blur-md border-b border-slate-800 z-50 shrink-0">
+        <div class="max-w-7xl mx-auto px-4 py-2.5 flex flex-wrap justify-between items-center gap-3">
+            <div class="flex items-center space-x-3">
+                <div class="bg-gradient-to-tr from-emerald-500 to-cyan-400 text-slate-950 p-2 rounded-xl shadow-lg shadow-emerald-500/20 flex items-center justify-center">
+                    <i data-lucide="git-fork" class="w-5 h-5 stroke-[2.5]"></i>
+                </div>
+                <div>
+                    <div class="flex items-center space-x-2">
+                        <h1 class="text-base sm:text-lg font-bold tracking-tight text-white title-font">
+                            動物決策樹資料科學實驗室
+                        </h1>
+                        <span class="bg-emerald-500/10 text-emerald-400 border border-emerald-500/20 text-[10px] font-mono px-2 py-0.5 rounded-full uppercase tracking-wider font-semibold">Pro v2.5</span>
+                    </div>
+                    <p class="text-xs text-slate-400">監督式學習分類、遞迴動態拖拉建樹、不純度計算與剪枝教學</p>
+                </div>
+            </div>
+
+            <!-- Tab Buttons (5 Tabs) -->
+            <nav class="flex space-x-1 bg-slate-950/80 p-1 rounded-xl border border-slate-800/80 overflow-x-auto text-xs max-w-full">
+                <button onclick="switchMode(1)" id="tab-btn-1" class="tab-btn px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                    <i data-lucide="calculator" class="w-3.5 h-3.5"></i>
+                    <span>1. 動態決策推理</span>
+                </button>
+                <button onclick="switchMode(2)" id="tab-btn-2" class="tab-btn px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                    <i data-lucide="network" class="w-3.5 h-3.5"></i>
+                    <span>2. 全樹結構與不純度</span>
+                </button>
+                <button onclick="switchMode(3)" id="tab-btn-3" class="tab-btn px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap bg-emerald-500 text-slate-950 font-bold shadow-md shadow-emerald-500/20">
+                    <i data-lucide="move" class="w-3.5 h-3.5"></i>
+                    <span>3. 動態拖拉決策樹</span>
+                </button>
+                <button onclick="switchMode(4)" id="tab-btn-4" class="tab-btn px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                    <i data-lucide="scissors" class="w-3.5 h-3.5"></i>
+                    <span>4. 過擬合與剪枝教學</span>
+                </button>
+                <button onclick="switchMode(5)" id="tab-btn-5" class="tab-btn px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60">
+                    <i data-lucide="scale" class="w-3.5 h-3.5"></i>
+                    <span>5. 監督式學習利弊評析</span>
+                </button>
+            </nav>
+        </div>
+    </header>
+
+    <!-- Main Workspace Container -->
+    <main class="flex-1 overflow-y-auto p-3 sm:p-5">
+        <div class="max-w-7xl mx-auto h-full flex flex-col">
+
+            <!-- ============================================================== -->
+            <!-- MODE 1: 動態決策推理與即時指標計算 (Dynamic Reasoning & Metrics)  -->
+            <!-- ============================================================== -->
+            <section id="mode-panel-1" class="space-y-4 hidden">
+                <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3 shadow-xl">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[11px] rounded border border-emerald-500/20 font-mono">CART / ID3 Engine</span>
+                            <h2 class="text-base sm:text-lg font-bold text-white">即時特徵分割與數學不純度演繹</h2>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">
+                            在每個決策節點，系統動態計算資料子集 $D$ 的熵 $H(D)$、基尼不純度 $Gini(D)$ 以及所有候選特徵的資訊獲取量 $IG$。
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <button onclick="stepBackM1()" id="btn-m1-back" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 disabled:opacity-40 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 flex items-center space-x-1 transition">
+                            <i data-lucide="corner-up-left" class="w-3.5 h-3.5"></i>
+                            <span>上一步 (Undo)</span>
+                        </button>
+                        <button onclick="resetM1()" class="px-3 py-1.5 bg-emerald-500/20 hover:bg-emerald-500/30 text-emerald-400 rounded-xl text-xs font-semibold border border-emerald-500/40 flex items-center space-x-1 transition">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                            <span>重置資料集 (Reset)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <!-- Left: Decision Card & Sample Pool (5 Cols) -->
+                    <div class="lg:col-span-5 space-y-4">
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl relative overflow-hidden">
+                            <div class="flex items-center justify-between pb-3 border-b border-slate-800 text-xs">
+                                <span class="text-slate-400 font-mono">節點層級: <strong id="m1-node-depth" class="text-emerald-400 font-bold text-sm">Depth 0 (Root)</strong></span>
+                                <span class="bg-slate-800 text-slate-300 px-2 py-0.5 rounded font-mono text-[11px]" id="m1-sample-badge">N = 12</span>
+                            </div>
+
+                            <div id="m1-question-box" class="py-4">
+                                <div class="text-[11px] font-semibold tracking-wider text-emerald-400 uppercase flex items-center gap-1.5 mb-1.5">
+                                    <i data-lucide="git-commit" class="w-3.5 h-3.5"></i>
+                                    <span>最佳劃分特徵 (Best Split Feature)</span>
+                                </div>
+                                <h3 id="m1-question-title" class="text-lg font-bold text-white mb-2">請問動物「是否有羽毛 (Feathers)?」</h3>
+                                <p id="m1-question-desc" class="text-xs text-slate-400 leading-relaxed mb-4">
+                                    該特徵在當前子集中具有最高的資訊獲取量 ($IG = 0.5216$)，能最有效降低總體混亂度。
+                                </p>
+
+                                <div id="m1-buttons-container" class="grid grid-cols-2 gap-3">
+                                    <button onclick="chooseBranch(true)" class="py-3 px-4 bg-emerald-600 hover:bg-emerald-500 active:scale-[0.98] text-white rounded-xl font-bold text-sm shadow-lg shadow-emerald-900/30 transition flex items-center justify-center space-x-2 border border-emerald-400/30">
+                                        <i data-lucide="check-circle" class="w-4 h-4"></i>
+                                        <span>是 (True / Yes)</span>
+                                    </button>
+                                    <button onclick="chooseBranch(false)" class="py-3 px-4 bg-rose-600 hover:bg-rose-500 active:scale-[0.98] text-white rounded-xl font-bold text-sm shadow-lg shadow-rose-900/30 transition flex items-center justify-center space-x-2 border border-rose-400/30">
+                                        <i data-lucide="x-circle" class="w-4 h-4"></i>
+                                        <span>否 (False / No)</span>
+                                    </button>
+                                </div>
+
+                                <div id="m1-leaf-box" class="hidden text-center py-5 space-y-2 bg-emerald-950/30 border border-emerald-500/40 rounded-xl mt-2">
+                                    <div class="inline-flex p-3 bg-emerald-500/20 text-emerald-400 rounded-full">
+                                        <i data-lucide="award" class="w-7 h-7"></i>
+                                    </div>
+                                    <h4 class="text-base font-bold text-emerald-300" id="m1-leaf-name">純淨葉節點達成！</h4>
+                                    <p class="text-xs text-slate-300 max-w-xs mx-auto" id="m1-leaf-desc">子集內部所有樣本已完全同一類別，Entropy = 0，無須再進行切割。</p>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/80 border border-slate-800 rounded-2xl p-4">
+                            <div class="flex items-center justify-between mb-2">
+                                <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                                    <i data-lucide="database" class="w-3.5 h-3.5 text-cyan-400"></i>
+                                    <span>目前節點樣本清單 (<span id="m1-dataset-count">12</span> 隻)</span>
+                                </span>
+                                <span class="text-[11px] text-slate-400">動物標籤</span>
+                            </div>
+                            <div id="m1-sample-chips" class="flex flex-wrap gap-1.5 max-h-48 overflow-y-auto p-1 bg-slate-950/60 rounded-xl border border-slate-800/80"></div>
+                        </div>
+                    </div>
+
+                    <!-- Right: Mathematical Computations & IG Table (7 Cols) -->
+                    <div class="lg:col-span-7 space-y-4">
+                        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 relative overflow-hidden">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-[11px] font-semibold text-emerald-400 font-mono tracking-wider uppercase">Shannon Entropy (香農熵)</span>
+                                        <div class="text-2xl font-bold text-white math-font mt-1 flex items-baseline gap-1.5">
+                                            <span id="m1-val-entropy">1.8294</span>
+                                            <span class="text-xs text-slate-400 font-normal">bits</span>
+                                        </div>
+                                    </div>
+                                    <div class="p-2 bg-emerald-500/10 rounded-lg text-emerald-400">
+                                        <i data-lucide="activity" class="w-4 h-4"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-2 text-[11px] text-slate-400 font-mono bg-slate-950 p-2 rounded-lg border border-slate-800/80 overflow-x-auto" id="m1-entropy-formula">
+                                    H(D) = - ∑ p_i * log2(p_i)
+                                </div>
+                            </div>
+
+                            <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 relative overflow-hidden">
+                                <div class="flex justify-between items-start">
+                                    <div>
+                                        <span class="text-[11px] font-semibold text-cyan-400 font-mono tracking-wider uppercase">Gini Impurity (基尼不純度)</span>
+                                        <div class="text-2xl font-bold text-white math-font mt-1" id="m1-val-gini">0.6944</div>
+                                    </div>
+                                    <div class="p-2 bg-cyan-500/10 rounded-lg text-cyan-400">
+                                        <i data-lucide="pie-chart" class="w-4 h-4"></i>
+                                    </div>
+                                </div>
+                                <div class="mt-2 text-[11px] text-slate-400 font-mono bg-slate-950 p-2 rounded-lg border border-slate-800/80 overflow-x-auto" id="m1-gini-formula">
+                                    Gini(D) = 1 - ∑ (p_i)^2
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4">
+                            <span class="text-xs font-bold text-slate-300 block mb-2">類別機率分佈 (Class Probabilities $p_i$)：</span>
+                            <div id="m1-class-bars" class="space-y-2"></div>
+                        </div>
+
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4 shadow-xl">
+                            <div class="flex justify-between items-center mb-3">
+                                <div>
+                                    <h4 class="text-xs font-bold text-white uppercase tracking-wider flex items-center gap-1.5">
+                                        <i data-lucide="bar-chart-3" class="w-3.5 h-3.5 text-amber-400"></i>
+                                        <span>候選特徵之資訊獲取量 (Information Gain, IG) 評估</span>
+                                    </h4>
+                                    <p class="text-[11px] text-slate-400 mt-0.5">公式：$IG(D, A) = H(D) - \sum \frac{|D_v|}{|D|} H(D_v)$</p>
+                                </div>
+                                <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded border border-amber-500/20 font-mono">Ranked by IG</span>
+                            </div>
+
+                            <div class="overflow-x-auto">
+                                <table class="w-full text-left text-xs">
+                                    <thead>
+                                        <tr class="border-b border-slate-800 text-slate-400 font-mono text-[11px]">
+                                            <th class="pb-2">候選特徵 (Feature A)</th>
+                                            <th class="pb-2">Yes 分支 ($D_Y$)</th>
+                                            <th class="pb-2">No 分支 ($D_N$)</th>
+                                            <th class="pb-2 text-right">資訊獲取量 ($IG$)</th>
+                                            <th class="pb-2 text-center">決策</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody id="m1-ig-table-body" class="divide-y divide-slate-800/60 font-mono"></tbody>
+                                </table>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- MODE 2: 全樹結構與不純度視覺化 (Full Tree & Impurity Visualizer) -->
+            <!-- ============================================================== -->
+            <section id="mode-panel-2" class="space-y-4 hidden h-full">
+                <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-2">
+                    <div>
+                        <h2 class="text-base sm:text-lg font-bold text-white">決策樹全景結構與節點細節檢驗</h2>
+                        <p class="text-xs text-slate-400">點擊下方樹狀圖中的任何節點（決策或葉節點），右側面板將即時展開該節點代入公式的數學細節。</p>
+                    </div>
+                    <div class="flex items-center space-x-2 text-xs">
+                        <span class="inline-flex items-center gap-1 text-slate-300"><span class="w-2.5 h-2.5 rounded-full bg-cyan-500"></span> 決策節點</span>
+                        <span class="inline-flex items-center gap-1 text-slate-300 ml-2"><span class="w-2.5 h-2.5 rounded-full bg-emerald-500"></span> 純淨葉節點</span>
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <div class="lg:col-span-7 bg-slate-900/70 border border-slate-800 rounded-2xl p-3 flex flex-col items-center justify-center overflow-x-auto min-h-[460px]">
+                        <svg id="m2-tree-svg" class="w-full h-[440px] select-none" viewBox="0 0 680 420"></svg>
+                    </div>
+
+                    <div class="lg:col-span-5 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
+                        <div class="flex items-center justify-between pb-3 border-b border-slate-800">
+                            <div class="flex items-center space-x-2">
+                                <div id="m2-inspect-type-badge" class="px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30">
+                                    Root Split
+                                </div>
+                                <h3 id="m2-inspect-title" class="font-bold text-white text-base">特徵: 是否有羽毛?</h3>
+                            </div>
+                            <span id="m2-inspect-samples" class="text-xs font-mono bg-slate-800 text-slate-300 px-2 py-1 rounded">N = 12</span>
+                        </div>
+
+                        <div class="grid grid-cols-2 gap-3">
+                            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                                <span class="text-[11px] text-slate-400 block font-mono">Shannon Entropy</span>
+                                <span id="m2-inspect-entropy" class="text-xl font-bold text-emerald-400 math-font">1.8294</span>
+                            </div>
+                            <div class="bg-slate-950 p-3 rounded-xl border border-slate-800/80">
+                                <span class="text-[11px] text-slate-400 block font-mono">Gini Impurity</span>
+                                <span id="m2-inspect-gini" class="text-xl font-bold text-cyan-400 math-font">0.6944</span>
+                            </div>
+                        </div>
+
+                        <div>
+                            <span class="text-xs font-bold text-slate-300 block mb-2">節點內動物類別組成：</span>
+                            <div id="m2-inspect-dist" class="space-y-1.5"></div>
+                        </div>
+
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800/80 space-y-2">
+                            <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                                <i data-lucide="function-square" class="w-4 h-4"></i>
+                                <span>數學代入計算明細 (Step-by-step substitution)：</span>
+                            </span>
+                            <div id="m2-inspect-math" class="text-[11px] font-mono text-slate-300 leading-relaxed overflow-x-auto whitespace-pre-wrap"></div>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- MODE 3: 動態拖拉決策樹 (無限遞迴建立多層，直到 Entropy = 0)     -->
+            <!-- ============================================================== -->
+            <section id="mode-panel-3" class="space-y-4">
+                <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 bg-emerald-500/10 text-emerald-400 text-[11px] rounded border border-emerald-500/20 font-mono">Recursive Tree Builder</span>
+                            <h2 class="text-base sm:text-lg font-bold text-white">動態拖拉構建決策樹（遞迴多層直到 Entropy = 0）</h2>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">
+                            只要節點的熵 $H > 0$（尚未純化），即可繼續將待選特徵拖入或點選填入該節點！子分支將持續展開，直到每個葉節點達到 $H = 0.000$ 完全分類。
+                        </p>
+                    </div>
+                    <div class="flex items-center space-x-2 shrink-0">
+                        <button onclick="loadOptimalTree()" class="px-3 py-1.5 bg-cyan-600/80 hover:bg-cyan-600 text-white rounded-xl text-xs font-semibold flex items-center space-x-1 transition shadow">
+                            <i data-lucide="zap" class="w-3.5 h-3.5"></i>
+                            <span>一鍵載入最佳樹 (Load Optimal)</span>
+                        </button>
+                        <button onclick="resetCustomTree()" class="px-3 py-1.5 bg-slate-800 hover:bg-slate-700 text-slate-300 rounded-xl text-xs font-medium border border-slate-700 flex items-center space-x-1 transition">
+                            <i data-lucide="rotate-ccw" class="w-3.5 h-3.5"></i>
+                            <span>清空重來 (Reset)</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Palette of Features (Draggable / Clickable) -->
+                <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-4">
+                    <div class="flex justify-between items-center mb-2.5">
+                        <span class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="layers" class="w-4 h-4 text-cyan-400"></i>
+                            <span>待選特徵池 (可直接拖曳，或點選特徵卡片分配至目標節點)：</span>
+                        </span>
+                        <span id="selected-palette-feature-badge" class="text-[11px] text-cyan-400 font-mono hidden">已選取特徵，請點選目標節點指派！</span>
+                    </div>
+                    <div class="grid grid-cols-2 sm:grid-cols-3 md:grid-cols-5 gap-2.5" id="feature-palette">
+                        <!-- Populated by JS -->
+                    </div>
+                </div>
+
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <!-- Recursive Interactive Tree View Canvas (8 Cols) -->
+                    <div class="lg:col-span-8 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between min-h-[520px] overflow-x-auto">
+                        <div class="flex justify-between items-center text-xs text-slate-400 mb-3 pb-2 border-b border-slate-800">
+                            <span>節點視圖：拖入特徵分割，或點擊「✕」移除重置分支</span>
+                            <span class="text-emerald-400 font-mono" id="custom-tree-status">建構中...</span>
+                        </div>
+
+                        <!-- Recursive Tree Container rendered by JS -->
+                        <div class="my-auto py-4 flex flex-col items-center min-w-[500px]" id="recursive-tree-canvas">
+                            <!-- Injected by renderRecursiveTree() -->
+                        </div>
+
+                        <div class="mt-4 pt-3 border-t border-slate-800 flex flex-wrap justify-between items-center text-[11px] text-slate-400 gap-2">
+                            <span>提示：好的分類樹會以最少的判斷次數將所有動物歸入 $H=0$ 的葉節點。</span>
+                            <span class="font-mono text-cyan-400" id="custom-tree-leaves-summary">純淨葉節點：0 / 0</span>
+                        </div>
+                    </div>
+
+                    <!-- Comparison Sidebar with Optimal Tree (4 Cols) -->
+                    <div class="lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-4 space-y-4">
+                        <div class="flex items-center justify-between pb-2 border-b border-slate-800">
+                            <div class="flex items-center space-x-2">
+                                <i data-lucide="git-compare" class="w-4 h-4 text-amber-400"></i>
+                                <h3 class="text-xs font-bold text-white uppercase tracking-wider">自建樹 vs. 演算法最佳解評比</h3>
+                            </div>
+                            <span class="bg-amber-500/10 text-amber-400 text-[10px] px-2 py-0.5 rounded font-mono font-bold">Benchmark</span>
+                        </div>
+
+                        <!-- Efficiency Score Gauge -->
+                        <div class="bg-slate-950 p-4 rounded-xl border border-slate-800 text-center">
+                            <span class="text-xs text-slate-400 block mb-1">建樹架構效率評分 (Efficiency Score)</span>
+                            <div class="text-3xl font-black text-white title-font flex items-center justify-center gap-1">
+                                <span id="m3-score" class="text-emerald-400">0%</span>
+                                <span class="text-xs text-slate-500 font-normal">/ 100</span>
+                            </div>
+                            <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden mt-2">
+                                <div id="m3-score-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 0%"></div>
+                            </div>
+                        </div>
+
+                        <!-- Metrics Comparison Grid -->
+                        <div class="space-y-2 text-xs">
+                            <div class="flex justify-between items-center bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80">
+                                <span class="text-slate-400">目前加權剩餘熵：</span>
+                                <span id="m3-cmp-entropy" class="font-mono font-bold text-emerald-400">1.8294 bits</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80">
+                                <span class="text-slate-400">純淨達成度 (Pure Leaves)：</span>
+                                <span id="m3-cmp-pure-rate" class="font-mono font-bold text-cyan-400">0% (0/1)</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80">
+                                <span class="text-slate-400">當前最大深度 vs. 最佳：</span>
+                                <span id="m3-cmp-depth" class="font-mono font-bold text-slate-300">0 層 (最佳: 3 層)</span>
+                            </div>
+                            <div class="flex justify-between items-center bg-slate-950/70 p-2.5 rounded-lg border border-slate-800/80">
+                                <span class="text-slate-400">總節點數 vs. 最佳：</span>
+                                <span id="m3-cmp-nodes" class="font-mono font-bold text-slate-300">1 個 (最佳: 7 個)</span>
+                            </div>
+                        </div>
+
+                        <!-- Smart Diagnostic Feedback -->
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-1.5">
+                            <span class="text-xs font-bold text-amber-400 flex items-center gap-1.5">
+                                <i data-lucide="sparkles" class="w-3.5 h-3.5"></i>
+                                <span>專家診斷與優化建議：</span>
+                            </span>
+                            <p id="m3-suggestion" class="text-xs text-slate-300 leading-relaxed">
+                                請先將「是否有羽毛 (Feathers)?」拉入根節點。羽毛能提供高達 0.5216 的資訊獲取量，能一舉將全部鳥類完美純化！
+                            </p>
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- MODE 4: 過擬合極端案例與剪枝沙盒 (Overfitting & Pruning Sandbox) -->
+            <!-- ============================================================== -->
+            <section id="mode-panel-4" class="space-y-4 hidden">
+                <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl flex flex-col md:flex-row justify-between items-start md:items-center gap-3">
+                    <div>
+                        <div class="flex items-center space-x-2">
+                            <span class="px-2 py-0.5 bg-rose-500/10 text-rose-400 text-[11px] rounded border border-rose-500/20 font-mono">Interactive Click-to-Prune</span>
+                            <h2 class="text-base sm:text-lg font-bold text-white">過擬合可視化節點與「點擊剪枝 (Click-to-Prune)」沙盒</h2>
+                        </div>
+                        <p class="text-xs text-slate-400 mt-1">
+                            點選樹狀圖上任何分支旁的「✂️ 剪刀圖示」即可即時將該子樹剪除為單一葉節點，親自體驗修剪雜訊與泛化準確度的微妙變化！
+                        </p>
+                    </div>
+
+                    <!-- Preset Pruning Shortcuts -->
+                    <div class="flex flex-wrap items-center gap-1.5 shrink-0">
+                        <button onclick="applyPresetPruning('overfit')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-rose-600/80 hover:bg-rose-600 text-white transition flex items-center gap-1">
+                            <i data-lucide="alert-octagon" class="w-3.5 h-3.5"></i>
+                            <span>1. 完全過擬合樹</span>
+                        </button>
+                        <button onclick="applyPresetPruning('pre')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-emerald-600/80 hover:bg-emerald-600 text-white transition flex items-center gap-1">
+                            <i data-lucide="shield-check" class="w-3.5 h-3.5"></i>
+                            <span>2. 一鍵預剪枝 (Depth=2)</span>
+                        </button>
+                        <button onclick="applyPresetPruning('post')" class="px-2.5 py-1.5 rounded-lg text-xs font-semibold bg-cyan-600/80 hover:bg-cyan-600 text-white transition flex items-center gap-1">
+                            <i data-lucide="git-merge" class="w-3.5 h-3.5"></i>
+                            <span>3. 一鍵最佳後剪枝</span>
+                        </button>
+                        <button onclick="applyPresetPruning('reset')" class="px-2.5 py-1.5 rounded-lg text-xs font-medium bg-slate-800 hover:bg-slate-700 text-slate-300 transition">
+                            <span>重置</span>
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Interactive Visual Click-to-Prune Tree & Live Metrics -->
+                <div class="grid grid-cols-1 lg:grid-cols-12 gap-4">
+                    <!-- Visual Interactive Pruning Tree Canvas (8 Cols) -->
+                    <div class="lg:col-span-8 bg-slate-900/80 border border-slate-800 rounded-2xl p-4 flex flex-col justify-between overflow-x-auto min-h-[480px]">
+                        <div class="flex justify-between items-center text-xs pb-2 border-b border-slate-800">
+                            <span class="text-slate-400">提示：點擊帶有「✂️」的按鈕可折疊該子樹 (Prune Subtree)</span>
+                            <span id="m4-prune-status" class="font-mono text-rose-400 font-bold">狀態：未剪枝 (深度 5，共 9 個節點)</span>
+                        </div>
+
+                        <!-- Pruning Interactive Tree Canvas -->
+                        <div class="my-auto py-4 flex justify-center min-w-[560px]">
+                            <div class="flex flex-col items-center space-y-4 text-xs font-sans">
+                                <!-- Root -->
+                                <div class="p-2.5 rounded-xl bg-slate-900 border border-cyan-500 text-center w-52 shadow-lg">
+                                    <div class="text-[10px] text-cyan-400 font-mono font-bold">Root (Depth 0)</div>
+                                    <div class="font-bold text-white">是否有羽毛 (Feathers)?</div>
+                                    <div class="text-[10px] text-slate-400">N=13 (含1隻突變無毛貓)</div>
+                                </div>
+
+                                <div class="w-full flex justify-around relative">
+                                    <!-- Bird Branch (Clean) -->
+                                    <div class="flex flex-col items-center space-y-2">
+                                        <div class="text-[10px] text-emerald-400 font-mono bg-emerald-500/10 px-2 py-0.5 rounded border border-emerald-500/20 font-bold">Yes (羽毛)</div>
+                                        <div class="p-2.5 rounded-xl bg-emerald-950/40 border border-emerald-500/50 text-center w-40">
+                                            <div class="text-emerald-300 font-bold">純淨葉：鳥類</div>
+                                            <div class="text-[10px] text-slate-400">N=3 (金雕、企鵝、蜂鳥)</div>
+                                            <div class="text-[9px] text-emerald-400 font-mono">H=0.0000 (Pure)</div>
+                                        </div>
+                                    </div>
+
+                                    <!-- Mammal & Noise Branch (Prunable!) -->
+                                    <div class="flex flex-col items-center space-y-3">
+                                        <div class="text-[10px] text-rose-400 font-mono bg-rose-500/10 px-2 py-0.5 rounded border border-rose-500/20 font-bold">No (無羽毛)</div>
+
+                                        <!-- Node 2: Mammal Check -->
+                                        <div class="p-2.5 rounded-xl bg-slate-900 border border-slate-700 text-center w-60 shadow relative">
+                                            <div class="text-white font-bold">是否為哺乳動物 (Mammal)?</div>
+                                            <div class="text-[10px] text-slate-400">N=10 | 獅子、狗、鱷魚、突變貓...</div>
+                                        </div>
+
+                                        <!-- Subtree: Noise branch with Click-to-Prune button -->
+                                        <div id="m4-subtree-noise" class="p-3 bg-slate-950/80 border-2 border-dashed border-rose-500/40 rounded-xl space-y-2.5 text-center relative max-w-sm">
+                                            <div class="flex items-center justify-between gap-2">
+                                                <span class="text-[10px] font-bold text-rose-400 uppercase tracking-wider flex items-center gap-1">
+                                                    <i data-lucide="alert-triangle" class="w-3.5 h-3.5"></i>
+                                                    <span>受雜訊汙染的深層子樹 (Depth 3~5)</span>
+                                                </span>
+                                                <button onclick="togglePruneSubtree()" id="btn-prune-toggle" class="px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow transition">
+                                                    <span>✂️ 點擊剪掉此分支 (Prune)</span>
+                                                </button>
+                                            </div>
+
+                                            <div id="m4-noise-content" class="space-y-1.5 text-left text-[11px] font-mono text-slate-300 bg-slate-900/90 p-2.5 rounded border border-slate-800">
+                                                <div class="text-rose-300">├── [是否有毛髮?] (突變無毛貓=No, 狗/獅=Yes)</div>
+                                                <div class="text-rose-300">│    ├── Yes -> 正常哺乳類 (N=4)</div>
+                                                <div class="text-rose-400">│    └── No -> [尾巴是否精確長度 <= 14.8cm?]</div>
+                                                <div class="text-rose-500">│         ├── Yes -> 突變無毛貓 (N=1, 嚴重過擬合)</div>
+                                                <div class="text-rose-300">└── 非哺乳動物 (鱷魚、蛇、魚類 N=5)</div>
+                                            </div>
+
+                                            <div id="m4-pruned-collapsed-content" class="hidden py-3 text-center space-y-1 bg-emerald-950/30 border border-emerald-500/30 rounded-lg">
+                                                <div class="text-emerald-400 font-bold text-xs flex items-center justify-center gap-1">
+                                                    <i data-lucide="check" class="w-4 h-4"></i>
+                                                    <span>已剪枝坍塌為穩定葉節點：多數決 (哺乳類 / 爬行類)</span>
+                                                </div>
+                                                <div class="text-[11px] text-slate-400">雜訊被平滑化，不再耗費 3 層深度區分個別單一突變樣本！</div>
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="pt-3 border-t border-slate-800 text-[11px] text-slate-400 flex justify-between">
+                            <span>剪枝準則：若修剪某子樹能顯著改善驗證集泛化誤差，則該分支視為雜訊過擬合。</span>
+                            <span class="text-cyan-400 font-mono">成本複雜度公式：$R_\alpha(T) = R(T) + \alpha |T|$</span>
+                        </div>
+                    </div>
+
+                    <!-- Pruning Accuracy & Complexity Metrics Dashboard (4 Cols) -->
+                    <div class="lg:col-span-4 bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-4">
+                        <h4 class="text-xs font-bold text-slate-300 uppercase tracking-wider flex items-center gap-1.5">
+                            <i data-lucide="gauge" class="w-4 h-4 text-emerald-400"></i>
+                            <span>泛化效能動態儀表板</span>
+                        </h4>
+
+                        <!-- Accuracy Comparison Bars -->
+                        <div class="space-y-4 bg-slate-950 p-4 rounded-xl border border-slate-800">
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-400">訓練集準確率 (Training Accuracy)</span>
+                                    <span id="m4-train-acc" class="font-mono font-bold text-white">100.0%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div id="m4-train-bar" class="bg-emerald-500 h-full rounded-full transition-all duration-500" style="width: 100%"></div>
+                                </div>
+                            </div>
+
+                            <div>
+                                <div class="flex justify-between text-xs mb-1">
+                                    <span class="text-slate-400">測試集泛化準確率 (Generalization Accuracy)</span>
+                                    <span id="m4-test-acc" class="font-mono font-bold text-rose-400">61.5%</span>
+                                </div>
+                                <div class="w-full bg-slate-800 h-2 rounded-full overflow-hidden">
+                                    <div id="m4-test-bar" class="bg-rose-500 h-full rounded-full transition-all duration-500" style="width: 61.5%"></div>
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Parameters and Penalty Table -->
+                        <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-800 space-y-2 text-xs font-mono">
+                            <span class="font-bold text-white block font-sans">剪枝指標度量 (Metrics)：</span>
+                            <div class="flex justify-between border-b border-slate-800 pb-1.5">
+                                <span class="text-slate-400">樹最大深度 (Depth)：</span>
+                                <span id="m4-val-depth" class="text-rose-400 font-bold">5 層 (過深)</span>
+                            </div>
+                            <div class="flex justify-between border-b border-slate-800 pb-1.5">
+                                <span class="text-slate-400">葉節點數量 (|T|)：</span>
+                                <span id="m4-val-leaves" class="text-slate-300 font-bold">6 個</span>
+                            </div>
+                            <div class="flex justify-between">
+                                <span class="text-slate-400">複雜度懲罰項 ($\alpha|T|$)：</span>
+                                <span id="m4-val-penalty" class="text-amber-400 font-bold">0.180 (過高)</span>
+                            </div>
+                        </div>
+
+                        <!-- Real-time Diagnostic Verdict -->
+                        <div id="m4-verdict" class="p-3.5 rounded-xl border text-xs leading-relaxed bg-rose-500/10 border-rose-500/30 text-rose-300">
+                            <strong>過擬合警報：</strong>樹為了完美分類那隻「突變無毛貓」長出了長度小於 14.8cm 的怪異分支。導致新測試樣本準確率慘跌至 61.5%！
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- ============================================================== -->
+            <!-- MODE 5: 監督式學習利弊評析 & 小朋友解釋版 (Critique & Kid Version) -->
+            <!-- ============================================================== -->
+            <section id="mode-panel-5" class="space-y-4 hidden">
+                <div class="bg-slate-900/90 border border-slate-800 p-4 rounded-2xl flex flex-col sm:flex-row justify-between items-start sm:items-center gap-3">
+                    <div>
+                        <span class="px-2 py-0.5 bg-indigo-500/10 text-indigo-400 text-[11px] rounded border border-indigo-500/20 font-mono">Supervised Learning Synthesis</span>
+                        <h2 class="text-base sm:text-lg font-bold text-white mt-1">決策樹之資料科學利弊分析與大師評析</h2>
+                        <p class="text-xs text-slate-400 mt-0.5">兼具嚴謹的統計機器學習洞察，與專為學童設計的超直覺白話比喻！</p>
+                    </div>
+
+                    <!-- View Switcher (Professional vs Kid Friendly) -->
+                    <div class="flex items-center space-x-1.5 bg-slate-950 p-1 rounded-xl border border-slate-800 shrink-0 text-xs">
+                        <button onclick="toggleExplainerView('pro')" id="btn-view-pro" class="px-3 py-1.5 rounded-lg font-bold transition bg-emerald-500 text-slate-950 shadow">
+                            專業資料科學版
+                        </button>
+                        <button onclick="toggleExplainerView('kid')" id="btn-view-kid" class="px-3 py-1.5 rounded-lg font-medium transition text-slate-400 hover:text-white">
+                            🐥 小朋友解釋版
+                        </button>
+                    </div>
+                </div>
+
+                <!-- Professional Deep-Dive View -->
+                <div id="view-pro-container" class="space-y-4">
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                        <!-- Strengths Card -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3.5">
+                            <div class="flex items-center space-x-2 text-emerald-400 pb-2 border-b border-slate-800">
+                                <i data-lucide="check-circle-2" class="w-5 h-5"></i>
+                                <h3 class="font-bold text-base text-white">決策樹的三大核心優勢 (Core Strengths)</h3>
+                            </div>
+                            <div class="space-y-3 text-xs text-slate-300">
+                                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
+                                    <strong class="text-emerald-400 block font-semibold mb-1 text-sm">1. 極致的白箱可解釋性 (White-box Interpretability)</strong>
+                                    決策樹由一連串具備明確語義的 <code class="font-mono text-emerald-300">IF-THEN</code> 規則鏈構成。與深度神經網路或高維 SVM 等黑箱模型不同，在醫療診斷、保險核貸與動物學分類上，推論路徑清晰可審查。
+                                </div>
+                                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
+                                    <strong class="text-emerald-400 block font-semibold mb-1 text-sm">2. 幾乎無前置特徵工程負擔 (Non-parametric & Scale-invariant)</strong>
+                                    數值特徵無須標準化（Z-score）或正規化，對極端離群值（Outliers）與尺度單調縮放完全免疫，能天然同時消化類別型（Categorical）與數值型資料。
+                                </div>
+                                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
+                                    <strong class="text-emerald-400 block font-semibold mb-1 text-sm">3. 自動特徵選擇 (Automatic Feature Selection)</strong>
+                                    演算法由根節點開始貪婪挑選資訊獲取量（$IG$）最大的特徵，無關或具有強烈噪音的特徵自動被排在低層級或直接剪枝拋棄。
+                                </div>
+                            </div>
+                        </div>
+
+                        <!-- Limitations Card -->
+                        <div class="bg-slate-900/90 border border-slate-800 rounded-2xl p-5 space-y-3.5">
+                            <div class="flex items-center space-x-2 text-rose-400 pb-2 border-b border-slate-800">
+                                <i data-lucide="alert-triangle" class="w-5 h-5"></i>
+                                <h3 class="font-bold text-base text-white">單一樹的致命三缺陷 (Inherent Limitations)</h3>
+                            </div>
+                            <div class="space-y-3 text-xs text-slate-300">
+                                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
+                                    <strong class="text-rose-400 block font-semibold mb-1 text-sm">1. 高方差與過擬合傾向 (High Variance & Overfitting)</strong>
+                                    未加限制的決策樹會試圖記憶每一個訓練樣本（達到 $H=0$），把隨機雜訊當成黃金定律，導致測試集泛化表現崩潰。
+                                </div>
+                                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
+                                    <strong class="text-rose-400 block font-semibold mb-1 text-sm">2. 拓撲結構對資料變動極度敏感 (High Instability)</strong>
+                                    採用由上而下的貪婪分割機制，只要訓練集微調 1~2 筆資料使得根節點的最佳特徵易位，後續整棵樹的結構將發生雪崩式巨變。
+                                </div>
+                                <div class="bg-slate-950 p-3.5 rounded-xl border border-slate-850">
+                                    <strong class="text-rose-400 block font-semibold mb-1 text-sm">3. 軸對齊切分限制 (Axis-Aligned Splits)</strong>
+                                    每次切割線必須平行於座標軸（如 $X_1 > \theta$）。當分類邊界呈現斜對角等線性組合時，決策樹必須耗費數十個階梯狀矩形逐步逼近，效率低下。
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Modern Solution: Random Forest & XGBoost -->
+                    <div class="bg-gradient-to-r from-slate-900 via-slate-850 to-slate-900 border border-slate-800 p-5 rounded-2xl space-y-3">
+                        <div class="flex items-center space-x-2 text-cyan-400">
+                            <i data-lucide="layers" class="w-5 h-5"></i>
+                            <h3 class="font-bold text-base text-white">工業界解答：向集成學習 (Ensemble Learning) 的典範轉移</h3>
+                        </div>
+                        <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300 leading-relaxed">
+                            <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                                <strong class="text-cyan-300 font-bold block mb-1">隨機森林 (Random Forest - Bagging 策略)：</strong>
+                                建造數百棵彼此獨立的深層決策樹，每棵樹透過 Bootstrap 抽樣資料與隨機挑選特徵子集，最後透過「多數決表決」平滑化單一樹的方差，徹底根治過擬合。
+                            </div>
+                            <div class="bg-slate-950/70 p-4 rounded-xl border border-slate-800">
+                                <strong class="text-emerald-300 font-bold block mb-1">梯度提升樹 (XGBoost / LightGBM - Boosting 策略)：</strong>
+                                序列式訓練多棵淺層弱學習樹，每一棵後續樹專門修正前面所有樹留下來的「殘差 (Residuals)」。在結構化表格資料（Tabular Data）中至今仍是效能霸主。
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Kids / Elementary Friendly Explainer View (小朋友解釋版) -->
+                <div id="view-kid-container" class="space-y-4 hidden">
+                    <div class="bg-gradient-to-r from-amber-500/10 via-yellow-500/10 to-emerald-500/10 border border-amber-500/30 p-5 rounded-2xl text-slate-200">
+                        <div class="flex items-center space-x-3 mb-2">
+                            <span class="text-3xl">🐥</span>
+                            <div>
+                                <h3 class="text-base font-bold text-amber-300">小朋友也能聽懂的「決策樹終極猜猜樂」小百科</h3>
+                                <p class="text-xs text-slate-400">用日常生活的趣味比喻，把複雜的機器學習觀念變身成趣味猜謎故事！</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-4 text-xs text-slate-300">
+                        <!-- Metaphor 1: 什麼是決策樹？ -->
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                            <div class="flex items-center space-x-2 text-amber-400">
+                                <span class="text-lg">🎯</span>
+                                <h4 class="font-bold text-white text-sm">1. 什麼是決策樹？就像玩「海龜湯或二十個是非題」！</h4>
+                            </div>
+                            <p class="leading-relaxed">
+                                想像老師心裡想了一隻動物讓你猜。聰明的小朋友絕不會一開始就亂猜「是不是吉娃娃？」。你會先問：「它有沒有羽毛？」
+                                <br><br>
+                                只要回答「有！」，你就一口氣把獅子、狗、鱷魚全部淘汰，只剩下鳥類！決策樹就是電腦在玩這個猜謎遊戲，用最少的是非題把正確答案找出來。
+                            </p>
+                        </div>
+
+                        <!-- Metaphor 2: 什麼是資訊獲取量？ -->
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                            <div class="flex items-center space-x-2 text-cyan-400">
+                                <span class="text-lg">💡</span>
+                                <h4 class="font-bold text-white text-sm">2. 什麼是資訊獲取量 (IG)？「問對問題」是神算子！</h4>
+                            </div>
+                            <p class="leading-relaxed">
+                                如果你第一個問題問：「它身上有沒有長一根特別長的左眉毛？」——這就是爛問題，因為大家都沒有，問了等於沒問（資訊獲取量很低）！
+                                <br><br>
+                                厲害的問題一刀切下去，剛好能把全班同學分成兩半，而且分得清清楚楚。數學家說的「香農熵 (Entropy)」，其實就是「心裡還覺得多問號、多混亂」的意思！
+                            </p>
+                        </div>
+
+                        <!-- Metaphor 3: 什麼是過擬合？ -->
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                            <div class="flex items-center space-x-2 text-rose-400">
+                                <span class="text-lg">🤯</span>
+                                <h4 class="font-bold text-white text-sm">3. 什麼是過擬合？死背考古題的「書呆子」！</h4>
+                            </div>
+                            <p class="leading-relaxed">
+                                班上有個小朋友小明，他把考卷上的題目「小華買了 3 顆蘋果花 30 元」整行背下來。
+                                <br><br>
+                                考試時老師把題目換成「小明買了 3 顆橘子」，他竟然大哭說不會寫！這就是<strong>過擬合</strong>。決策樹如果太貪心，連一隻受傷禿毛的特殊老鷹都死背下來，新題目換成正常的鳥時它反而猜錯！
+                            </p>
+                        </div>
+
+                        <!-- Metaphor 4: 什麼是剪枝？ -->
+                        <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2">
+                            <div class="flex items-center space-x-2 text-emerald-400">
+                                <span class="text-lg">✂️</span>
+                                <h4 class="font-bold text-white text-sm">4. 什麼是剪枝？幫大樹剪頭髮，不要太囉嗦！</h4>
+                            </div>
+                            <p class="leading-relaxed">
+                                頭髮太長會擋住眼睛，樹長太細會鑽牛角尖。
+                                <br><br>
+                                <strong>剪枝</strong>就是老師拿大剪刀，把那些「只為了 1 隻突變無毛貓」長出來的囉嗦小分支咔嚓剪掉。雖然平時小考少背了一題，但期末考面對各種沒看過的大題目時，表現反而考更高分！
+                            </p>
+                        </div>
+                    </div>
+
+                    <!-- Metaphor 5: 為什麼需要隨機森林？ -->
+                    <div class="bg-slate-900 border border-slate-800 p-4 rounded-2xl space-y-2 text-xs">
+                        <div class="flex items-center space-x-2 text-purple-400">
+                            <span class="text-lg">🌲🌲🌲</span>
+                            <h4 class="font-bold text-white text-sm">5. 為什麼最後大家都在用「隨機森林」？三個臭皮匠勝過一個諸葛亮！</h4>
+                        </div>
+                        <p class="text-slate-300 leading-relaxed">
+                            一棵樹就像一個人猜謎，再聰明也偶爾會看走眼。如果我們找 100 位同學組成一個「森林班級」，每位同學看動物不同的角度（有人看腳、有人看嘴巴、有人看體重），最後大家一起<strong>「舉手投票（多數決）」</strong>。這樣就算有一兩個人猜錯，大家選出來的答案永遠都超級準！這就是現代資料科學最受歡迎的「隨機森林 (Random Forest)」！
+                        </p>
+                    </div>
+                </div>
+            </section>
+
+        </div>
+    </main>
+
+    <!-- JavaScript Application Core -->
+    <script>
+        // ==========================================
+        // 1. DATASET & UTILITIES
+        // ==========================================
+        const FULL_ANIMAL_DATASET = [
+            { id: 1, name: "金雕", en: "Eagle", emoji: "🦅", class: "鳥類 (Bird)", feathers: true, mammal: false, warm: true, aquatic: false, legs4: false },
+            { id: 2, name: "企鵝", en: "Penguin", emoji: "🐧", class: "鳥類 (Bird)", feathers: true, mammal: false, warm: true, aquatic: true, legs4: false },
+            { id: 3, name: "蜂鳥", en: "Hummingbird", emoji: "🐦", class: "鳥類 (Bird)", feathers: true, mammal: false, warm: true, aquatic: false, legs4: false },
+            { id: 4, name: "非洲獅", en: "Lion", emoji: "🦁", class: "哺乳類 (Mammal)", feathers: false, mammal: true, warm: true, aquatic: false, legs4: true },
+            { id: 5, name: "寬吻海豚", en: "Dolphin", emoji: "🐬", class: "哺乳類 (Mammal)", feathers: false, mammal: true, warm: true, aquatic: true, legs4: false },
+            { id: 6, name: "金毛犬", en: "Dog", emoji: "🐕", class: "哺乳類 (Mammal)", feathers: false, mammal: true, warm: true, aquatic: false, legs4: true },
+            { id: 7, name: "倉鼠", en: "Hamster", emoji: "🐹", class: "哺乳類 (Mammal)", feathers: false, mammal: true, warm: true, aquatic: false, legs4: true },
+            { id: 8, name: "尼羅鱷", en: "Crocodile", emoji: "🐊", class: "爬蟲綱 (Reptile)", feathers: false, mammal: false, warm: false, aquatic: true, legs4: true },
+            { id: 9, name: "眼鏡王蛇", en: "Cobra", emoji: "🐍", class: "爬蟲綱 (Reptile)", feathers: false, mammal: false, warm: false, aquatic: false, legs4: false },
+            { id: 10, name: "大西洋鮭", en: "Salmon", emoji: "🐟", class: "魚綱 (Fish)", feathers: false, mammal: false, warm: false, aquatic: true, legs4: false },
+            { id: 11, name: "藍鯨", en: "Blue Whale", emoji: "🐋", class: "哺乳類 (Mammal)", feathers: false, mammal: true, warm: true, aquatic: true, legs4: false },
+            { id: 12, name: "樹蛙", en: "Tree Frog", emoji: "🐸", class: "兩棲綱 (Amphibian)", feathers: false, mammal: false, warm: false, aquatic: true, legs4: true }
+        ];
+
+        const FEATURES_METADATA = [
+            { key: "feathers", name: "是否有羽毛 (Feathers)?", desc: "鳥類皆具備羽毛，其他綱別無", tag: "鳥類專屬" },
+            { key: "mammal", name: "是否為哺乳類 (Mammal)?", desc: "胎生、乳腺育幼特徵", tag: "哺乳綱" },
+            { key: "warm", name: "是否為恆溫動物 (Warm-blooded)?", desc: "鳥類與哺乳類為恆溫", tag: "體溫調節" },
+            { key: "aquatic", name: "是否生活在水中 (Aquatic)?", desc: "棲地偏好為水生或陸生", tag: "生態棲地" },
+            { key: "legs4", name: "是否有四隻腳 (Four Legs)?", desc: "肢體四足骨骼形態", tag: "骨骼肢體" }
+        ];
+
+        const CLASS_COLORS = {
+            "鳥類 (Bird)": { badge: "bg-amber-500/20 text-amber-300 border-amber-500/30", bar: "bg-amber-400" },
+            "哺乳類 (Mammal)": { badge: "bg-blue-500/20 text-blue-300 border-blue-500/30", bar: "bg-blue-400" },
+            "爬蟲綱 (Reptile)": { badge: "bg-emerald-500/20 text-emerald-300 border-emerald-500/30", bar: "bg-emerald-400" },
+            "兩棲綱 (Amphibian)": { badge: "bg-teal-500/20 text-teal-300 border-teal-500/30", bar: "bg-teal-400" },
+            "魚綱 (Fish)": { badge: "bg-cyan-500/20 text-cyan-300 border-cyan-500/30", bar: "bg-cyan-400" }
+        };
+
+        function computeClassCounts(dataset) {
+            const counts = {};
+            dataset.forEach(item => { counts[item.class] = (counts[item.class] || 0) + 1; });
+            return counts;
+        }
+
+        function calculateEntropy(dataset) {
+            const n = dataset.length;
+            if (n === 0) return { value: 0, steps: "N=0, H=0", probs: {} };
+            const counts = computeClassCounts(dataset);
+            const classes = Object.keys(counts);
+            if (classes.length <= 1) return { value: 0.0000, steps: "完全純淨 (Pure), H(D) = 0.0000", probs: counts };
+
+            let entropy = 0;
+            let steps = "H(D) = - [ ";
+            const probs = {};
+            classes.forEach((cls, idx) => {
+                const p = counts[cls] / n;
+                probs[cls] = p;
+                entropy -= p * Math.log2(p);
+                steps += `(${counts[cls]}/${n})*log2(${counts[cls]}/${n})`;
+                if (idx < classes.length - 1) steps += " + ";
+            });
+            steps += ` ] = ${entropy.toFixed(4)} bits`;
+            return { value: parseFloat(entropy.toFixed(4)), steps, probs };
+        }
+
+        function calculateGini(dataset) {
+            const n = dataset.length;
+            if (n === 0) return { value: 0, steps: "N=0, Gini=0" };
+            const counts = computeClassCounts(dataset);
+            const classes = Object.keys(counts);
+            if (classes.length <= 1) return { value: 0.0000, steps: "完全純淨 (Pure), Gini(D) = 0.0000" };
+
+            let sumSquaredProbs = 0;
+            let steps = "Gini(D) = 1 - [ ";
+            classes.forEach((cls, idx) => {
+                const p = counts[cls] / n;
+                sumSquaredProbs += (p * p);
+                steps += `(${counts[cls]}/${n})²`;
+                if (idx < classes.length - 1) steps += " + ";
+            });
+            const gini = 1 - sumSquaredProbs;
+            steps += ` ] = ${gini.toFixed(4)}`;
+            return { value: parseFloat(gini.toFixed(4)), steps };
+        }
+
+        function calculateInformationGain(parentDataset, featureKey) {
+            const parentEntropy = calculateEntropy(parentDataset).value;
+            const n = parentDataset.length;
+            const dYes = parentDataset.filter(item => item[featureKey] === true);
+            const dNo = parentDataset.filter(item => item[featureKey] === false);
+
+            if (dYes.length === 0 || dNo.length === 0) {
+                return { ig: 0, dYes, dNo, weightedEntropy: parentEntropy, hYes: 0, hNo: 0 };
+            }
+
+            const hYes = calculateEntropy(dYes).value;
+            const hNo = calculateEntropy(dNo).value;
+            const weightedEntropy = (dYes.length / n) * hYes + (dNo.length / n) * hNo;
+            const ig = parentEntropy - weightedEntropy;
+
+            return {
+                ig: parseFloat(Math.max(0, ig).toFixed(4)),
+                dYes, dNo, hYes, hNo,
+                weightedEntropy: parseFloat(weightedEntropy.toFixed(4))
+            };
+        }
+
+        // ==========================================
+        // 2. MODE 1: DYNAMIC REASONING
+        // ==========================================
+        let m1History = [];
+        let m1CurrentDataset = [...FULL_ANIMAL_DATASET];
+        let m1UsedFeatures = [];
+        let m1BestFeature = null;
+
+        function initMode1() {
+            m1History = [];
+            m1CurrentDataset = [...FULL_ANIMAL_DATASET];
+            m1UsedFeatures = [];
+            renderMode1();
+        }
+
+        function resetM1() { initMode1(); }
+
+        function stepBackM1() {
+            if (m1History.length === 0) return;
+            const prev = m1History.pop();
+            m1CurrentDataset = prev.dataset;
+            m1UsedFeatures = prev.usedFeatures;
+            renderMode1();
+        }
+
+        function chooseBranch(isYes) {
+            if (!m1BestFeature) return;
+            m1History.push({
+                dataset: [...m1CurrentDataset],
+                usedFeatures: [...m1UsedFeatures],
+                featureChosen: m1BestFeature
+            });
+            m1UsedFeatures.push(m1BestFeature.key);
+            m1CurrentDataset = m1CurrentDataset.filter(item => item[m1BestFeature.key] === isYes);
+            renderMode1();
+        }
+
+        function renderMode1() {
+            const depth = m1UsedFeatures.length;
+            document.getElementById('m1-node-depth').innerText = `Depth ${depth}`;
+            document.getElementById('m1-sample-badge').innerText = `N = ${m1CurrentDataset.length}`;
+            document.getElementById('m1-dataset-count').innerText = m1CurrentDataset.length;
+            document.getElementById('btn-m1-back').disabled = (m1History.length === 0);
+
+            const ent = calculateEntropy(m1CurrentDataset);
+            const gini = calculateGini(m1CurrentDataset);
+            document.getElementById('m1-val-entropy').innerText = ent.value.toFixed(4);
+            document.getElementById('m1-entropy-formula').innerText = ent.steps;
+            document.getElementById('m1-val-gini').innerText = gini.value.toFixed(4);
+            document.getElementById('m1-gini-formula').innerText = gini.steps;
+
+            // Render chips
+            const chips = document.getElementById('m1-sample-chips');
+            chips.innerHTML = '';
+            m1CurrentDataset.forEach(a => {
+                const style = CLASS_COLORS[a.class] || { badge: 'bg-slate-800 text-slate-300' };
+                const span = document.createElement('span');
+                span.className = `text-[11px] px-2 py-1 rounded-lg border font-medium flex items-center gap-1 ${style.badge}`;
+                span.innerHTML = `<span>${a.emoji}</span><span>${a.name}</span>`;
+                chips.appendChild(span);
+            });
+
+            // Bars
+            const bars = document.getElementById('m1-class-bars');
+            bars.innerHTML = '';
+            const counts = computeClassCounts(m1CurrentDataset);
+            const total = m1CurrentDataset.length;
+            Object.keys(counts).forEach(cls => {
+                const count = counts[cls];
+                const pct = total > 0 ? ((count / total) * 100).toFixed(1) : 0;
+                const style = CLASS_COLORS[cls] || { bar: 'bg-emerald-400' };
+                bars.innerHTML += `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>${cls}</span>
+                            <span class="font-mono text-slate-400">${count}隻 (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-2 rounded-full overflow-hidden border border-slate-800">
+                            <div class="${style.bar} h-full rounded-full transition-all duration-300" style="width: ${pct}%"></div>
+                        </div>
+                    </div>`;
+            });
+
+            // IG evaluation
+            const remaining = FEATURES_METADATA.filter(f => !m1UsedFeatures.includes(f.key));
+            const igRankings = remaining.map(f => ({ feature: f, ...calculateInformationGain(m1CurrentDataset, f.key) }));
+            igRankings.sort((a, b) => b.ig - a.ig);
+
+            const tbody = document.getElementById('m1-ig-table-body');
+            tbody.innerHTML = '';
+            const isPureLeaf = (ent.value === 0 || m1CurrentDataset.length <= 1 || remaining.length === 0);
+
+            igRankings.forEach((row, idx) => {
+                const isSelected = (idx === 0 && !isPureLeaf && row.ig > 0);
+                tbody.innerHTML += `
+                    <tr class="${isSelected ? 'bg-emerald-500/10 text-emerald-300 font-bold' : 'text-slate-300 hover:bg-slate-800/40'}">
+                        <td class="py-2.5 flex items-center gap-1.5">
+                            ${isSelected ? '<span class="w-2 h-2 rounded-full bg-emerald-400"></span>' : ''}
+                            <span>${row.feature.name}</span>
+                        </td>
+                        <td class="py-2.5 text-slate-400">N=${row.dYes.length} (H=${row.hYes})</td>
+                        <td class="py-2.5 text-slate-400">N=${row.dNo.length} (H=${row.hNo})</td>
+                        <td class="py-2.5 text-right font-bold ${isSelected ? 'text-emerald-400' : 'text-slate-200'}">${row.ig.toFixed(4)}</td>
+                        <td class="py-2.5 text-center">
+                            ${isSelected ? '<span class="px-1.5 py-0.5 rounded bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 text-[10px]">PICKED</span>' : '<span class="text-slate-600">-</span>'}
+                        </td>
+                    </tr>`;
+            });
+
+            const qTitle = document.getElementById('m1-question-title');
+            const qDesc = document.getElementById('m1-question-desc');
+            const btns = document.getElementById('m1-buttons-container');
+            const leafBox = document.getElementById('m1-leaf-box');
+
+            if (isPureLeaf || igRankings.length === 0 || igRankings[0].ig === 0) {
+                btns.classList.add('hidden');
+                leafBox.classList.remove('hidden');
+                qTitle.innerText = "已抵達葉節點 (Terminal Leaf)";
+                qDesc.innerText = "此子集已無法再進行有意義的資訊獲取分割。";
+                const dominant = Object.keys(counts)[0] || "純淨";
+                document.getElementById('m1-leaf-name').innerText = `分類為：${dominant}`;
+                document.getElementById('m1-leaf-desc').innerText = `包含樣本：${m1CurrentDataset.map(d=>d.name).join('、')}。不純度 H(D) = ${ent.value.toFixed(4)}。`;
+                m1BestFeature = null;
+            } else {
+                btns.classList.remove('hidden');
+                leafBox.classList.add('hidden');
+                m1BestFeature = igRankings[0].feature;
+                qTitle.innerText = `請問動物「${m1BestFeature.name}」`;
+                qDesc.innerText = `特徵 ${m1BestFeature.desc}，當前資訊獲取量最高 ($IG = ${igRankings[0].ig.toFixed(4)}$)。`;
+            }
+        }
+
+        // ==========================================
+        // 3. MODE 2: FULL TREE & INSPECTOR
+        // ==========================================
+        const M2_TREE_GRAPH = {
+            id: "root",
+            title: "是否有羽毛 (Feathers)?",
+            type: "decision",
+            samples: 12,
+            entropy: 1.8294,
+            gini: 0.6944,
+            dist: { "鳥類 (Bird)": 3, "哺乳類 (Mammal)": 4, "爬蟲綱 (Reptile)": 2, "魚綱 (Fish)": 1, "兩棲綱 (Amphibian)": 2 },
+            mathFormula: "H(Root) = -(3/12)log2(3/12) - (4/12)log2(4/12) - (2/12)log2(2/12) - (1/12)log2(1/12) - (2/12)log2(2/12)\n        = 0.5000 + 0.5283 + 0.4308 + 0.2987 + 0.4308 = 1.8294 bits\nGini(Root) = 1 - [(3/12)² + (4/12)² + (2/12)² + (1/12)² + (2/12)²] = 0.6944",
+            children: [
+                {
+                    id: "leaf_bird",
+                    title: "純淨葉：鳥類 (Birds)",
+                    type: "leaf",
+                    branchLabel: "Yes (有羽毛)",
+                    samples: 3,
+                    entropy: 0.0000,
+                    gini: 0.0000,
+                    dist: { "鳥類 (Bird)": 3 },
+                    mathFormula: "H(Leaf) = - (3/3)*log2(3/3) = 0.0000 (完全純淨)\nGini(Leaf) = 1 - (3/3)² = 0.0000\n包含：金雕 🦅、企鵝 🐧、蜂鳥 🐦。"
+                },
+                {
+                    id: "node_mammal",
+                    title: "是否為哺乳類 (Mammal)?",
+                    type: "decision",
+                    branchLabel: "No (無羽毛)",
+                    samples: 9,
+                    entropy: 1.4488,
+                    gini: 0.6173,
+                    dist: { "哺乳類 (Mammal)": 4, "爬蟲綱 (Reptile)": 2, "魚綱 (Fish)": 1, "兩棲綱 (Amphibian)": 2 },
+                    mathFormula: "H(D_No) = -(4/9)log2(4/9) - (2/9)log2(2/9) - (1/9)log2(1/9) - (2/9)log2(2/9) = 1.4488 bits\nGini(D_No) = 0.6173\n此節點排除鳥類後，以哺乳類特徵再度分割。",
+                    children: [
+                        {
+                            id: "leaf_mammal",
+                            title: "純淨葉：哺乳類 (Mammals)",
+                            type: "leaf",
+                            branchLabel: "Yes (哺乳類)",
+                            samples: 4,
+                            entropy: 0.0000,
+                            gini: 0.0000,
+                            dist: { "哺乳類 (Mammal)": 4 },
+                            mathFormula: "H(Leaf) = -(4/4)*log2(4/4) = 0.0000 bits\nGini(Leaf) = 0.0000\n包含：獅子 🦁、海豚 🐬、金毛犬 🐕、倉鼠 🐹。"
+                        },
+                        {
+                            id: "node_legs",
+                            title: "是否有四隻腳 (Four Legs)?",
+                            type: "decision",
+                            branchLabel: "No (非哺乳)",
+                            samples: 5,
+                            entropy: 0.9710,
+                            gini: 0.4800,
+                            dist: { "爬蟲綱 (Reptile)": 2, "魚綱 (Fish)": 1, "兩棲綱 (Amphibian)": 2 },
+                            mathFormula: "H(D) = -(2/5)log2(2/5) - (1/5)log2(1/5) - (2/5)log2(2/5) = 0.9710 bits",
+                            children: [
+                                {
+                                    id: "leaf_reptile",
+                                    title: "葉：四足爬行/兩棲",
+                                    type: "leaf",
+                                    branchLabel: "Yes (有四腳)",
+                                    samples: 3,
+                                    entropy: 0.9183,
+                                    gini: 0.4444,
+                                    dist: { "爬蟲綱 (Reptile)": 1, "兩棲綱 (Amphibian)": 2 },
+                                    mathFormula: "尼羅鱷 🐊、樹蛙 🐸。"
+                                },
+                                {
+                                    id: "leaf_marine",
+                                    title: "葉：無四肢水生/蛇類",
+                                    type: "leaf",
+                                    branchLabel: "No (無四腳)",
+                                    samples: 2,
+                                    entropy: 1.0000,
+                                    gini: 0.5000,
+                                    dist: { "爬蟲綱 (Reptile)": 1, "魚綱 (Fish)": 1 },
+                                    mathFormula: "眼鏡王蛇 🐍 與大西洋鮭 🐟。"
+                                }
+                            ]
+                        }
+                    ]
+                }
+            ]
+        };
+
+        let selectedNodeId = "root";
+
+        function initMode2() {
+            renderMode2SVG();
+            inspectNode(M2_TREE_GRAPH);
+        }
+
+        function renderMode2SVG() {
+            const svg = document.getElementById('m2-tree-svg');
+            svg.innerHTML = '';
+
+            const nodeCoords = {
+                root: { x: 340, y: 40, data: M2_TREE_GRAPH },
+                leaf_bird: { x: 140, y: 150, data: M2_TREE_GRAPH.children[0] },
+                node_mammal: { x: 500, y: 150, data: M2_TREE_GRAPH.children[1] },
+                leaf_mammal: { x: 390, y: 270, data: M2_TREE_GRAPH.children[1].children[0] },
+                node_legs: { x: 570, y: 270, data: M2_TREE_GRAPH.children[1].children[1] },
+                leaf_reptile: { x: 500, y: 380, data: M2_TREE_GRAPH.children[1].children[1].children[0] },
+                leaf_marine: { x: 620, y: 380, data: M2_TREE_GRAPH.children[1].children[1].children[1] }
+            };
+
+            const edges = [
+                { from: "root", to: "leaf_bird", label: "Yes (羽毛)" },
+                { from: "root", to: "node_mammal", label: "No (無羽毛)" },
+                { from: "node_mammal", to: "leaf_mammal", label: "Yes (哺乳)" },
+                { from: "node_mammal", to: "node_legs", label: "No (非哺乳)" },
+                { from: "node_legs", to: "leaf_reptile", label: "Yes (四腳)" },
+                { from: "node_legs", to: "leaf_marine", label: "No (無四腳)" }
+            ];
+
+            edges.forEach(e => {
+                const s = nodeCoords[e.from];
+                const end = nodeCoords[e.to];
+                const line = document.createElementNS("http://www.w3.org/2000/svg", "line");
+                line.setAttribute("x1", s.x);
+                line.setAttribute("y1", s.y + 16);
+                line.setAttribute("x2", end.x);
+                line.setAttribute("y2", end.y - 16);
+                line.setAttribute("class", "branch-line");
+                svg.appendChild(line);
+
+                const text = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                text.setAttribute("x", (s.x + end.x) / 2 + (s.x > end.x ? -10 : 10));
+                text.setAttribute("y", (s.y + end.y) / 2 - 4);
+                text.setAttribute("fill", "#94a3b8");
+                text.setAttribute("font-size", "10");
+                text.setAttribute("text-anchor", "middle");
+                text.setAttribute("font-family", "monospace");
+                text.textContent = e.label;
+                svg.appendChild(text);
+            });
+
+            Object.keys(nodeCoords).forEach(id => {
+                const node = nodeCoords[id];
+                const isSelected = (id === selectedNodeId);
+                const isLeaf = (node.data.type === 'leaf');
+
+                const g = document.createElementNS("http://www.w3.org/2000/svg", "g");
+                g.setAttribute("class", "cursor-pointer transition-transform duration-200 hover:scale-105");
+                g.onclick = () => {
+                    selectedNodeId = id;
+                    renderMode2SVG();
+                    inspectNode(node.data);
+                };
+
+                const rect = document.createElementNS("http://www.w3.org/2000/svg", "rect");
+                rect.setAttribute("x", node.x - 70);
+                rect.setAttribute("y", node.y - 22);
+                rect.setAttribute("width", "140");
+                rect.setAttribute("height", "44");
+                rect.setAttribute("rx", "10");
+
+                if (isSelected) {
+                    rect.setAttribute("fill", "#042f2e");
+                    rect.setAttribute("stroke", "#10b981");
+                    rect.setAttribute("stroke-width", "2.5");
+                    rect.setAttribute("filter", "drop-shadow(0 0 8px rgba(16, 185, 129, 0.5))");
+                } else if (isLeaf) {
+                    rect.setAttribute("fill", "#064e3b");
+                    rect.setAttribute("stroke", "#059669");
+                    rect.setAttribute("stroke-width", "1.5");
+                } else {
+                    rect.setAttribute("fill", "#0f172a");
+                    rect.setAttribute("stroke", "#0284c7");
+                    rect.setAttribute("stroke-width", "1.5");
+                }
+                g.appendChild(rect);
+
+                const textTitle = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textTitle.setAttribute("x", node.x);
+                textTitle.setAttribute("y", node.y - 3);
+                textTitle.setAttribute("fill", "#f8fafc");
+                textTitle.setAttribute("font-size", "11");
+                textTitle.setAttribute("font-weight", "bold");
+                textTitle.setAttribute("text-anchor", "middle");
+                textTitle.textContent = node.data.title.length > 13 ? node.data.title.substring(0, 12) + '...' : node.data.title;
+                g.appendChild(textTitle);
+
+                const textSub = document.createElementNS("http://www.w3.org/2000/svg", "text");
+                textSub.setAttribute("x", node.x);
+                textSub.setAttribute("y", node.y + 13);
+                textSub.setAttribute("fill", isLeaf ? "#6ee7b7" : "#38bdf8");
+                textSub.setAttribute("font-size", "9.5");
+                textSub.setAttribute("font-family", "monospace");
+                textSub.setAttribute("text-anchor", "middle");
+                textSub.textContent = `N=${node.data.samples} | H=${node.data.entropy.toFixed(2)}`;
+                g.appendChild(textSub);
+
+                svg.appendChild(g);
+            });
+        }
+
+        function inspectNode(node) {
+            document.getElementById('m2-inspect-title').innerText = node.title;
+            document.getElementById('m2-inspect-samples').innerText = `N = ${node.samples}`;
+            document.getElementById('m2-inspect-entropy').innerText = `${node.entropy.toFixed(4)} bits`;
+            document.getElementById('m2-inspect-gini').innerText = `${node.gini.toFixed(4)}`;
+            document.getElementById('m2-inspect-math').innerText = node.mathFormula;
+
+            const badge = document.getElementById('m2-inspect-type-badge');
+            if (node.type === 'leaf') {
+                badge.className = 'px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-emerald-500/20 text-emerald-300 border border-emerald-500/30';
+                badge.innerText = 'Pure Terminal Leaf';
+            } else {
+                badge.className = 'px-2 py-0.5 rounded text-[11px] font-mono font-bold bg-cyan-500/20 text-cyan-300 border border-cyan-500/30';
+                badge.innerText = 'Split Decision Node';
+            }
+
+            const dist = document.getElementById('m2-inspect-dist');
+            dist.innerHTML = '';
+            Object.keys(node.dist).forEach(cls => {
+                const count = node.dist[cls];
+                const pct = ((count / node.samples) * 100).toFixed(1);
+                const style = CLASS_COLORS[cls] || { bar: 'bg-emerald-400' };
+                dist.innerHTML += `
+                    <div class="space-y-1">
+                        <div class="flex justify-between text-xs text-slate-300">
+                            <span>${cls}</span>
+                            <span class="font-mono text-slate-400">${count}隻 (${pct}%)</span>
+                        </div>
+                        <div class="w-full bg-slate-950 h-1.5 rounded-full overflow-hidden border border-slate-800">
+                            <div class="${style.bar} h-full rounded-full" style="width: ${pct}%"></div>
+                        </div>
+                    </div>`;
+            });
+        }
+
+        // ==============================================================
+        // 4. MODE 3: RECURSIVE DRAG & DROP CUSTOM TREE BUILDER (NO LIMITS)
+        // ==============================================================
+        let customTreeRoot = createTreeNode("root", FULL_ANIMAL_DATASET, null, 0);
+        let selectedPaletteFeature = null;
+
+        function createTreeNode(id, dataset, branchCondition = null, depth = 0) {
+            return {
+                id: id,
+                dataset: dataset,
+                featureKey: null,
+                branchCondition: branchCondition, // 'yes' or 'no'
+                depth: depth,
+                yesChild: null,
+                noChild: null
+            };
+        }
+
+        function initMode3() {
+            renderPalette();
+            renderRecursiveTreeUI();
+        }
+
+        function renderPalette() {
+            const palette = document.getElementById('feature-palette');
+            palette.innerHTML = '';
+            FEATURES_METADATA.forEach(feat => {
+                const card = document.createElement('div');
+                card.draggable = true;
+                card.ondragstart = (e) => {
+                    e.dataTransfer.setData("text/plain", feat.key);
+                    selectedPaletteFeature = feat.key;
+                };
+                card.onclick = () => {
+                    if (selectedPaletteFeature === feat.key) {
+                        selectedPaletteFeature = null;
+                        document.getElementById('selected-palette-feature-badge').classList.add('hidden');
+                    } else {
+                        selectedPaletteFeature = feat.key;
+                        const badge = document.getElementById('selected-palette-feature-badge');
+                        badge.innerText = `已選取「${feat.name}」，請點擊目標節點指派！`;
+                        badge.classList.remove('hidden');
+                    }
+                    renderPaletteHighlights();
+                };
+                card.id = `palette-feat-${feat.key}`;
+                card.className = "bg-slate-950 hover:bg-slate-850 p-2.5 rounded-xl border border-slate-800 hover:border-cyan-400 cursor-pointer active:cursor-grabbing transition text-xs flex flex-col justify-between select-none shadow";
+                card.innerHTML = `
+                    <div>
+                        <div class="flex justify-between items-center mb-1">
+                            <span class="text-[10px] text-cyan-400 font-mono font-bold">${feat.tag}</span>
+                            <i data-lucide="grip-vertical" class="w-3.5 h-3.5 text-slate-500"></i>
+                        </div>
+                        <div class="font-bold text-white text-xs">${feat.name}</div>
+                    </div>
+                    <div class="text-[10px] text-slate-400 mt-1 line-clamp-1">${feat.desc}</div>
+                `;
+                palette.appendChild(card);
+            });
+            lucide.createIcons();
+            renderPaletteHighlights();
+        }
+
+        function renderPaletteHighlights() {
+            FEATURES_METADATA.forEach(feat => {
+                const el = document.getElementById(`palette-feat-${feat.key}`);
+                if (!el) return;
+                if (selectedPaletteFeature === feat.key) {
+                    el.classList.add('border-cyan-400', 'bg-cyan-950/40', 'ring-2', 'ring-cyan-500/50');
+                } else {
+                    el.classList.remove('border-cyan-400', 'bg-cyan-950/40', 'ring-2', 'ring-cyan-500/50');
+                }
+            });
+        }
+
+        function findNodeById(node, id) {
+            if (!node) return null;
+            if (node.id === id) return node;
+            const inYes = findNodeById(node.yesChild, id);
+            if (inYes) return inYes;
+            return findNodeById(node.noChild, id);
+        }
+
+        function assignFeatureToNode(nodeId, featureKey) {
+            const node = findNodeById(customTreeRoot, nodeId);
+            if (!node) return;
+            const ent = calculateEntropy(node.dataset).value;
+            if (ent === 0 || node.dataset.length <= 1) return; // pure node cannot split
+
+            node.featureKey = featureKey;
+            const dYes = node.dataset.filter(a => a[featureKey] === true);
+            const dNo = node.dataset.filter(a => a[featureKey] === false);
+
+            node.yesChild = createTreeNode(`${node.id}_Y`, dYes, 'yes', node.depth + 1);
+            node.noChild = createTreeNode(`${node.id}_N`, dNo, 'no', node.depth + 1);
+
+            selectedPaletteFeature = null;
+            document.getElementById('selected-palette-feature-badge').classList.add('hidden');
+            renderRecursiveTreeUI();
+        }
+
+        function removeFeatureFromNode(nodeId) {
+            const node = findNodeById(customTreeRoot, nodeId);
+            if (!node) return;
+            node.featureKey = null;
+            node.yesChild = null;
+            node.noChild = null;
+            renderRecursiveTreeUI();
+        }
+
+        function resetCustomTree() {
+            customTreeRoot = createTreeNode("root", FULL_ANIMAL_DATASET, null, 0);
+            renderRecursiveTreeUI();
+        }
+
+        function loadOptimalTree() {
+            // Greedy ID3/CART Optimal Tree:
+            // Root: feathers -> Yes: Bird (N=3, pure)
+            // No: mammal -> Yes: Mammal (N=4, pure)
+            // No: aquatic -> Yes: (Crocodile, Salmon, Tree Frog) -> legs4 -> Yes: Croc+Tree Frog, No: Salmon
+            // Fully separates cleanly!
+            customTreeRoot = createTreeNode("root", FULL_ANIMAL_DATASET, null, 0);
+            assignFeatureToNode("root", "feathers");
+            assignFeatureToNode("root_N", "mammal");
+            assignFeatureToNode("root_N_N", "aquatic");
+            assignFeatureToNode("root_N_N_Y", "legs4");
+            assignFeatureToNode("root_N_N_N", "warm");
+            renderRecursiveTreeUI();
+        }
+
+        // HTML5 Drag and Drop events
+        function onNodeDragOver(e) {
+            e.preventDefault();
+            e.currentTarget.classList.add('drag-target-active');
+        }
+
+        function onNodeDragLeave(e) {
+            e.currentTarget.classList.remove('drag-target-active');
+        }
+
+        function onNodeDrop(e, nodeId) {
+            e.preventDefault();
+            e.currentTarget.classList.remove('drag-target-active');
+            const featKey = e.dataTransfer.getData("text/plain") || selectedPaletteFeature;
+            if (featKey) {
+                assignFeatureToNode(nodeId, featKey);
+            }
+        }
+
+        function onNodeClick(nodeId) {
+            if (selectedPaletteFeature) {
+                assignFeatureToNode(nodeId, selectedPaletteFeature);
+            }
+        }
+
+        // Recursive HTML Node DOM Builder
+        function buildNodeHTML(node) {
+            const ent = calculateEntropy(node.dataset).value;
+            const gini = calculateGini(node.dataset).value;
+            const isPure = (ent === 0 || node.dataset.length <= 1);
+            const isAssigned = (node.featureKey !== null);
+
+            let branchBadge = "";
+            if (node.branchCondition === 'yes') {
+                branchBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-emerald-500/20 text-emerald-400 border border-emerald-500/30 mb-1 inline-block">Yes (符合)</span>`;
+            } else if (node.branchCondition === 'no') {
+                branchBadge = `<span class="px-2 py-0.5 rounded text-[10px] font-mono font-bold bg-rose-500/20 text-rose-400 border border-rose-500/30 mb-1 inline-block">No (不符合)</span>`;
+            }
+
+            // Animal chips inside node
+            const animalChips = node.dataset.map(a => `<span class="px-1.5 py-0.5 rounded text-[9.5px] bg-slate-900 border border-slate-800 text-slate-300 font-medium inline-flex items-center gap-0.5">${a.emoji} ${a.name}</span>`).join('');
+
+            let nodeCardHTML = "";
+
+            if (isPure) {
+                // Pure Leaf Node
+                const dominantClass = node.dataset[0] ? node.dataset[0].class : "純淨葉";
+                nodeCardHTML = `
+                    <div class="w-64 p-3 rounded-2xl bg-emerald-950/40 border-2 border-emerald-500/60 shadow-lg text-center space-y-1.5 transition-all">
+                        ${branchBadge}
+                        <div class="flex items-center justify-center gap-1 text-emerald-400 font-bold text-xs">
+                            <i data-lucide="check-circle" class="w-4 h-4"></i>
+                            <span>🎉 純淨葉節點 (Pure Leaf)</span>
+                        </div>
+                        <div class="text-[11px] font-bold text-white">${dominantClass}</div>
+                        <div class="text-[10px] font-mono text-emerald-300">N=${node.dataset.length} | H=0.0000 | Gini=0.0000</div>
+                        <div class="flex flex-wrap gap-1 justify-center pt-1 border-t border-emerald-500/20">${animalChips}</div>
+                    </div>
+                `;
+            } else if (!isAssigned) {
+                // Unassigned split node (Dropzone)
+                nodeCardHTML = `
+                    <div id="dropzone-${node.id}" 
+                         ondragover="onNodeDragOver(event)" 
+                         ondragleave="onNodeDragLeave(event)" 
+                         ondrop="onNodeDrop(event, '${node.id}')" 
+                         onclick="onNodeClick('${node.id}')"
+                         class="w-64 p-3.5 rounded-2xl border-2 border-dashed border-cyan-500/40 bg-slate-950/80 hover:border-cyan-400 hover:bg-cyan-950/20 flex flex-col items-center text-center transition-all cursor-pointer relative shadow-lg group">
+                        ${branchBadge}
+                        <span class="text-[10px] uppercase font-mono tracking-wider text-cyan-400 font-bold mb-1">
+                            ${node.depth === 0 ? 'Root Node (根節點)' : `Depth ${node.depth} 待劃分節點`}
+                        </span>
+                        <div class="text-xs text-slate-400 group-hover:text-cyan-300 transition my-1">
+                            <i data-lucide="plus-circle" class="w-5 h-5 mx-auto mb-1 text-slate-500 group-hover:text-cyan-400"></i>
+                            <span>拖曳特徵 或 點選填入</span>
+                        </div>
+                        <div class="text-[10px] font-mono text-slate-400">N=${node.dataset.length} | H=${ent.toFixed(4)} bits</div>
+                        <div class="flex flex-wrap gap-1 justify-center mt-2 pt-1 border-t border-slate-800">${animalChips}</div>
+                    </div>
+                `;
+            } else {
+                // Assigned Feature Node with children
+                const feat = FEATURES_METADATA.find(f => f.key === node.featureKey);
+                nodeCardHTML = `
+                    <div class="w-64 p-3 rounded-2xl border-2 border-emerald-500/80 bg-slate-900 shadow-xl text-center space-y-1 relative">
+                        <button onclick="removeFeatureFromNode('${node.id}')" title="移除特徵重置" class="absolute top-2 right-2 p-1 text-slate-400 hover:text-rose-400 hover:bg-slate-800 rounded transition">
+                            <i data-lucide="x" class="w-3.5 h-3.5"></i>
+                        </button>
+                        ${branchBadge}
+                        <div class="text-[10px] uppercase font-mono font-bold text-emerald-400">
+                            ${node.depth === 0 ? 'Root Split' : `Depth ${node.depth} Split`}
+                        </div>
+                        <div class="text-xs font-bold text-white flex items-center justify-center gap-1">
+                            <i data-lucide="git-commit" class="w-3.5 h-3.5 text-emerald-400"></i>
+                            <span>${feat ? feat.name : node.featureKey}</span>
+                        </div>
+                        <div class="text-[10px] font-mono text-slate-400">N=${node.dataset.length} | H=${ent.toFixed(4)}</div>
+                        <div class="flex flex-wrap gap-1 justify-center pt-1 border-t border-slate-800/80">${animalChips}</div>
+                    </div>
+                `;
+            }
+
+            // If node has children, render branches recursively
+            if (node.yesChild && node.noChild) {
+                return `
+                    <div class="flex flex-col items-center">
+                        ${nodeCardHTML}
+                        <div class="w-0.5 h-6 bg-slate-700"></div>
+                        <div class="flex items-start space-x-6 relative">
+                            <!-- Branch Line horizontal crossbar -->
+                            <div class="absolute top-0 left-1/4 right-1/4 h-0.5 bg-slate-700"></div>
+                            
+                            <div class="flex flex-col items-center pt-2">
+                                ${buildNodeHTML(node.yesChild)}
+                            </div>
+                            <div class="flex flex-col items-center pt-2">
+                                ${buildNodeHTML(node.noChild)}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            } else {
+                return `
+                    <div class="flex flex-col items-center">
+                        ${nodeCardHTML}
+                    </div>
+                `;
+            }
+        }
+
+        // Traverse tree to calculate stats
+        function analyzeTree(node) {
+            let totalLeaves = 0;
+            let pureLeaves = 0;
+            let weightedEntropy = 0;
+            let maxDepth = node.depth;
+            let totalNodes = 1;
+
+            function traverse(curr) {
+                if (!curr) return;
+                maxDepth = Math.max(maxDepth, curr.depth);
+                const ent = calculateEntropy(curr.dataset).value;
+
+                if (!curr.yesChild && !curr.noChild) {
+                    // Leaf node (pure or unassigned terminal)
+                    totalLeaves++;
+                    if (ent === 0 || curr.dataset.length <= 1) pureLeaves++;
+                    weightedEntropy += (curr.dataset.length / FULL_ANIMAL_DATASET.length) * ent;
+                } else {
+                    totalNodes += 2;
+                    traverse(curr.yesChild);
+                    traverse(curr.noChild);
+                }
+            }
+
+            traverse(node);
+            return { totalLeaves, pureLeaves, weightedEntropy, maxDepth, totalNodes };
+        }
+
+        function renderRecursiveTreeUI() {
+            const canvas = document.getElementById('recursive-tree-canvas');
+            canvas.innerHTML = buildNodeHTML(customTreeRoot);
+            lucide.createIcons();
+
+            // Benchmark updates
+            const stats = analyzeTree(customTreeRoot);
+            document.getElementById('custom-tree-status').innerText = `目前架構：深度 ${stats.maxDepth} 層，共 ${stats.totalNodes} 個節點`;
+            document.getElementById('custom-tree-leaves-summary').innerText = `純淨葉節點：${stats.pureLeaves} / ${stats.totalLeaves}`;
+
+            const scoreEl = document.getElementById('m3-score');
+            const scoreBar = document.getElementById('m3-score-bar');
+            const cmpEntropy = document.getElementById('m3-cmp-entropy');
+            const cmpPureRate = document.getElementById('m3-cmp-pure-rate');
+            const cmpDepth = document.getElementById('m3-cmp-depth');
+            const cmpNodes = document.getElementById('m3-cmp-nodes');
+            const suggestion = document.getElementById('m3-suggestion');
+
+            cmpEntropy.innerText = `${stats.weightedEntropy.toFixed(4)} bits`;
+            const purePct = stats.totalLeaves > 0 ? ((stats.pureLeaves / stats.totalLeaves) * 100).toFixed(0) : 0;
+            cmpPureRate.innerText = `${purePct}% (${stats.pureLeaves}/${stats.totalLeaves})`;
+            cmpDepth.innerText = `${stats.maxDepth} 層 (最佳: 3 層)`;
+            cmpNodes.innerText = `${stats.totalNodes} 個 (最佳: 7 個)`;
+
+            // Score logic
+            let score = 0;
+            if (stats.pureLeaves > 0) {
+                score += (stats.pureLeaves / 4) * 50; // pure leaves contribution
+            }
+            if (customTreeRoot.featureKey === 'feathers') score += 25; // optimal root
+            if (stats.weightedEntropy === 0) {
+                // completely resolved
+                if (stats.maxDepth <= 3) score += 25;
+                else score += 15;
+            } else {
+                score += Math.max(0, (1 - stats.weightedEntropy / 1.8294) * 20);
+            }
+            score = Math.min(100, Math.round(score));
+
+            scoreEl.innerText = `${score}%`;
+            scoreBar.style.width = `${score}%`;
+
+            // Expert Diagnostic suggestion
+            if (customTreeRoot.featureKey === null) {
+                suggestion.innerHTML = "請先將「是否有羽毛 (Feathers)?」拖入根節點。羽毛能提供高達 0.5216 的資訊獲取量，能一舉將全部鳥類完美純化！";
+            } else if (stats.weightedEntropy === 0) {
+                if (stats.maxDepth <= 3) {
+                    suggestion.innerHTML = "🎉 <strong>完美的頂級架構！</strong> 你以僅僅 3 層的深度將所有動物 100% 分類至熵為 0 的純淨葉節點，效率與貪婪演算法完全一致！";
+                } else {
+                    suggestion.innerHTML = `👏 <strong>恭喜純化完成！</strong> 所有動物均已成功分類至 Entropy = 0。但目前深度為 <strong>${stats.maxDepth} 層</strong>，若調整分割順序（例如將羽毛置於根節點），可進一步壓縮至 3 層！`;
+                }
+            } else {
+                if (customTreeRoot.featureKey !== 'feathers') {
+                    suggestion.innerHTML = "根節點並非資訊獲取量最高的特徵，導致分割效率稍降。您可以點擊「✕」嘗試將羽毛放在 Root，體會資訊獲取量 (IG) 對樹深度的巨大影響！";
+                } else {
+                    suggestion.innerHTML = "根節點非常成功！請針對尚未純化（帶有虛線框）的子節點繼續拖入「是否為哺乳類?」或「是否為恆溫動物?」，直到熵完全降為 0！";
+                }
+            }
+        }
+
+        // ==========================================
+        // 5. MODE 4: CLICK-TO-PRUNE SANDBOX
+        // ==========================================
+        let isNoisePruned = false;
+
+        function initMode4() {
+            updatePruningUI();
+        }
+
+        function togglePruneSubtree() {
+            isNoisePruned = !isNoisePruned;
+            updatePruningUI();
+        }
+
+        function applyPresetPruning(type) {
+            if (type === 'overfit' || type === 'reset') {
+                isNoisePruned = false;
+            } else if (type === 'pre' || type === 'post') {
+                isNoisePruned = true;
+            }
+            updatePruningUI();
+        }
+
+        function updatePruningUI() {
+            const statusEl = document.getElementById('m4-prune-status');
+            const noiseContent = document.getElementById('m4-noise-content');
+            const collapsedContent = document.getElementById('m4-pruned-collapsed-content');
+            const toggleBtn = document.getElementById('btn-prune-toggle');
+
+            const trainAcc = document.getElementById('m4-train-acc');
+            const trainBar = document.getElementById('m4-train-bar');
+            const testAcc = document.getElementById('m4-test-acc');
+            const testBar = document.getElementById('m4-test-bar');
+
+            const depthEl = document.getElementById('m4-val-depth');
+            const leavesEl = document.getElementById('m4-val-leaves');
+            const penaltyEl = document.getElementById('m4-val-penalty');
+            const verdict = document.getElementById('m4-verdict');
+
+            if (!isNoisePruned) {
+                statusEl.innerText = "狀態：完全未剪枝 (深度 5，共 9 個節點)";
+                statusEl.className = "font-mono text-rose-400 font-bold";
+                noiseContent.classList.remove('hidden');
+                collapsedContent.classList.add('hidden');
+                toggleBtn.innerHTML = "<span>✂️ 點擊剪掉此分支 (Prune)</span>";
+                toggleBtn.className = "px-2 py-1 bg-rose-600 hover:bg-rose-500 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow transition";
+
+                trainAcc.innerText = "100.0%";
+                trainBar.style.width = "100%";
+                testAcc.innerText = "61.5% (泛化崩潰)";
+                testAcc.className = "font-mono font-bold text-rose-400";
+                testBar.style.width = "61.5%";
+                testBar.className = "bg-rose-500 h-full rounded-full transition-all duration-500";
+
+                depthEl.innerText = "5 層 (過深)";
+                depthEl.className = "text-rose-400 font-bold";
+                leavesEl.innerText = "6 個";
+                penaltyEl.innerText = "0.180 (懲罰過大)";
+                verdict.className = "p-3.5 rounded-xl border text-xs leading-relaxed bg-rose-500/10 border-rose-500/30 text-rose-300";
+                verdict.innerHTML = "<strong>過擬合警報：</strong>樹為了完美分類那隻「突變無毛貓」長出了長度小於 14.8cm 的怪異分支。導致新測試樣本準確率慘跌至 61.5%！";
+            } else {
+                statusEl.innerText = "狀態：已實施剪枝 (深度 2，共 4 個節點)";
+                statusEl.className = "font-mono text-emerald-400 font-bold";
+                noiseContent.classList.add('hidden');
+                collapsedContent.classList.remove('hidden');
+                toggleBtn.innerHTML = "<span>↩️ 還原雜訊分支 (Unprune)</span>";
+                toggleBtn.className = "px-2 py-1 bg-emerald-600 hover:bg-emerald-500 text-white rounded text-[10px] font-bold flex items-center gap-1 shadow transition";
+
+                trainAcc.innerText = "92.3%";
+                trainBar.style.width = "92.3%";
+                testAcc.innerText = "92.3% (大幅提升泛化力!)";
+                testAcc.className = "font-mono font-bold text-emerald-400";
+                testBar.style.width = "92.3%";
+                testBar.className = "bg-emerald-500 h-full rounded-full transition-all duration-500";
+
+                depthEl.innerText = "2 層 (最適深度)";
+                depthEl.className = "text-emerald-400 font-bold";
+                leavesEl.innerText = "3 個";
+                penaltyEl.innerText = "0.060 (結構簡潔)";
+                verdict.className = "p-3.5 rounded-xl border text-xs leading-relaxed bg-emerald-500/10 border-emerald-500/30 text-emerald-300";
+                verdict.innerHTML = "<strong>剪枝最佳化成功：</strong>大刀剪除雜訊分支後，雖然訓練集因忽略突變貓而稍微降至 92.3%，但測試集準確率一舉躍升至 92.3%，完美消弭過擬合！";
+            }
+        }
+
+        // ==========================================
+        // 6. MODE 5: CRITIQUE VIEW SWITCHER
+        // ==========================================
+        function toggleExplainerView(viewType) {
+            const btnPro = document.getElementById('btn-view-pro');
+            const btnKid = document.getElementById('btn-view-kid');
+            const proContainer = document.getElementById('view-pro-container');
+            const kidContainer = document.getElementById('view-kid-container');
+
+            if (viewType === 'pro') {
+                btnPro.className = "px-3 py-1.5 rounded-lg font-bold transition bg-emerald-500 text-slate-950 shadow";
+                btnKid.className = "px-3 py-1.5 rounded-lg font-medium transition text-slate-400 hover:text-white";
+                proContainer.classList.remove('hidden');
+                kidContainer.classList.add('hidden');
+            } else {
+                btnKid.className = "px-3 py-1.5 rounded-lg font-bold transition bg-amber-400 text-slate-950 shadow";
+                btnPro.className = "px-3 py-1.5 rounded-lg font-medium transition text-slate-400 hover:text-white";
+                kidContainer.classList.remove('hidden');
+                proContainer.classList.add('hidden');
+            }
+            lucide.createIcons();
+        }
+
+        // ==========================================
+        // 7. GLOBAL ROUTER
+        // ==========================================
+        function switchMode(modeNum) {
+            [1, 2, 3, 4, 5].forEach(n => {
+                const panel = document.getElementById(`mode-panel-${n}`);
+                const btn = document.getElementById(`tab-btn-${n}`);
+                if (n === modeNum) {
+                    panel.classList.remove('hidden');
+                    btn.className = 'tab-btn px-2.5 py-1.5 rounded-lg font-bold transition-all flex items-center space-x-1.5 whitespace-nowrap bg-emerald-500 text-slate-950 shadow-md shadow-emerald-500/20';
+                } else {
+                    panel.classList.add('hidden');
+                    btn.className = 'tab-btn px-2.5 py-1.5 rounded-lg font-medium transition-all flex items-center space-x-1.5 whitespace-nowrap text-slate-400 hover:text-slate-200 hover:bg-slate-800/60';
+                }
+            });
+
+            if (modeNum === 1) initMode1();
+            if (modeNum === 2) initMode2();
+            if (modeNum === 3) initMode3();
+            if (modeNum === 4) initMode4();
+            if (modeNum === 5) lucide.createIcons();
+            lucide.createIcons();
+        }
+
+        window.onload = function() {
+            lucide.createIcons();
+            initMode3(); // Launch directly into newly updated Tab 3
+        };
+    </script>
+</body>
+</html>
